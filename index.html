@@ -1676,7 +1676,7 @@
 <x-dc>
 <helmet>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
-<script>window.__VERSATIL_BUILD__ = "1790947429289";</script>
+<script>window.__VERSATIL_BUILD__ = "1790948101160";</script>
 <style>
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;height:100%;}
@@ -8009,6 +8009,17 @@ class Component extends DCLogic {
   // envia a configuração do agente ao webhook (Vercel) para o servidor responder com esse prompt/chave/modelo
   async syncAgentToWebhook(agent) {
     const configUrl = this.configUrlForAgent(agent);
+    // o servidor guarda UMA config de agente por canal/empresa — desativar ou salvar um
+    // agente desligado mandava enabled:false e derrubava o atendimento automático inteiro,
+    // mesmo com outro agente ativo no mesmo canal. Nesse caso sincroniza o agente ativo.
+    if (agent && agent.ativo === false && configUrl) {
+      // só conta agente que está vinculado de fato a um dos mesmos canais (agente sem canal
+      // cairia no mesmo endereço pelo canal "reserva" e trocaria o prompt sem ninguém pedir)
+      const meusCanais = agent.canais || [];
+      const outroAtivo = (this.state.agentes || []).find(a => a.id !== agent.id && a.ativo !== false
+        && (a.canais || []).some(cid => meusCanais.indexOf(cid) >= 0) && this.configUrlForAgent(a) === configUrl);
+      if (outroAtivo) return this.syncAgentToWebhook(outroAtivo);
+    }
     // sem canal com webhook registrado — nada a sincronizar. Isso é comum se o agente não
     // tem canal vinculado, mas se ele JÁ respondia mensagens antes, avisa (senão o app deixa
     // achar que "desativei e não sincronizou" foi silencioso, sem dar nenhuma pista do motivo)
