@@ -1676,7 +1676,7 @@
 <x-dc>
 <helmet>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
-<script>window.__VERSATIL_BUILD__ = "1790948101160";</script>
+<script>window.__VERSATIL_BUILD__ = "1790963389507";</script>
 <style>
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;height:100%;}
@@ -3876,6 +3876,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #14b8a6;outline-offset
                         <option value="geral">Comercial — vendas, estoque e produtos</option>
                         <option value="imobiliaria">Imobiliária — sem estoque/produtos</option>
                         <option value="eventos">Eventos — venda de ingressos e organização de festas</option>
+                        <option value="clinicas">Clínicas — pacientes, serviços e agendamento de consultas</option>
                         <option value="todos">Geral — mostra todos os itens do menu</option>
                       </select>
                       <sc-if value="{{ e.podeExcluir }}" hint-placeholder-val="{{ true }}">
@@ -5054,6 +5055,7 @@ POLÍTICAS: trocas em até 7 dias com nota." style="padding:14px 15px;border:1px
                   <option value="geral">Comercial — vendas, estoque e produtos</option>
                   <option value="imobiliaria">Imobiliária — sem estoque/produtos</option>
                   <option value="eventos">Eventos — venda de ingressos e organização de festas</option>
+                  <option value="clinicas">Clínicas — pacientes, serviços e agendamento de consultas</option>
                   <option value="todos">Geral — mostra todos os itens do menu</option>
                 </select>
               </label>
@@ -5866,12 +5868,17 @@ class Component extends DCLogic {
     const id = e.target.dataset.id, segmento = e.target.value;
     this.setEmpresaSegmento(id, segmento);
   };
+  // segmento novo (ex: clinicas) antes do script que libera o valor no banco → explica o que fazer
+  erroSegmento(e) {
+    const m = (e && e.message) || String(e);
+    return /segmento_check|23514|check constraint/i.test(m) ? 'O banco ainda não aceita esse segmento — execute o script supabase/33_segmento_clinicas.sql no Supabase.' : this.friendlyErr(e);
+  }
   async setEmpresaSegmento(id, segmento) {
     try {
       await this.api('PATCH', 'empresas', { id, body: { segmento } });
       this.setState(s => ({ empresasDisponiveis: (s.empresasDisponiveis || []).map(x => x.id === id ? Object.assign({}, x, { segmento }) : x) }));
       this.toast('success', 'Segmento atualizado');
-    } catch (e) { this.toast('error', this.friendlyErr(e)); }
+    } catch (e) { this.toast('error', this.erroSegmento(e)); }
   }
   // ---- excluir empresa (só desenvolvedor) — apaga a empresa e TODOS os dados dela no
   // servidor (/api/empresas DELETE → função excluir_empresa, script 31). Exige digitar o nome.
@@ -5899,7 +5906,7 @@ class Component extends DCLogic {
       this.setState({ modal: null, form: {} });
       this.toast('success', 'Empresa criada: ' + nome);
       this.loadEmpresas();
-    } catch (e) { this.toast('error', 'Falha ao criar empresa: ' + (e.message || e)); }
+    } catch (e) { this.toast('error', 'Falha ao criar empresa: ' + this.erroSegmento(e)); }
   }
   // ---- funcionários (usuários da empresa, com hierarquia admin/funcionário) ----
   async loadUsuarios() {
@@ -9645,6 +9652,7 @@ class Component extends DCLogic {
     const segmentoAtivo = (S.authSession && S.authSession.segmento) || 'geral';
     const isImobiliaria = segmentoAtivo === 'imobiliaria';
     const isEventos = segmentoAtivo === 'eventos';
+    const isClinicas = segmentoAtivo === 'clinicas';
     let groupsDef = [
       { key: 'principal', label: 'PRINCIPAL', items: [
         { key: 'dashboard', label: 'Dashboard', icon: 'ti-layout-dashboard' },
@@ -9678,13 +9686,18 @@ class Component extends DCLogic {
         // organizar por segmento depois (cada item já sabe a que segmento pertence)
         { key: 'estoque', label: 'Produtos', icon: 'ti-packages', badge: baixoCount || null, badgeColor: '#f59e0b', segmentos: ['geral'] },
         { key: 'estoque', label: 'Produtos', icon: 'ti-packages', badge: baixoCount || null, badgeColor: '#f59e0b', segmentos: ['eventos'] },
-        { key: 'clientes', label: 'Clientes', icon: 'ti-users' },
+        // clínica: o estoque é de materiais/insumos, não de produto à venda
+        { key: 'estoque', label: 'Materiais', icon: 'ti-first-aid-kit', badge: baixoCount || null, badgeColor: '#f59e0b', segmentos: ['clinicas'] },
+        // mesma aba de clientes; na clínica quem é atendido é paciente (rótulo condicional, e
+        // não um item por segmento, pra não aparecer duplicado no segmento "todos")
+        { key: 'clientes', label: isClinicas ? 'Pacientes' : 'Clientes', icon: 'ti-users' },
         { key: 'fornecedores', label: 'Fornecedores', icon: 'ti-building-warehouse' },
         // "Produtos"/"Imóveis"/"Eventos" (catálogo) idem — mesma aba (D.produtos), um
         // item por segmento em vez de rótulo condicional
         { key: 'produtos', label: 'Produtos', icon: 'ti-category', segmentos: ['geral'] },
         { key: 'produtos', label: 'Imóveis', icon: 'ti-building-estate', segmentos: ['imobiliaria'] },
         { key: 'produtos', label: 'Eventos', icon: 'ti-confetti', segmentos: ['eventos'] },
+        { key: 'produtos', label: 'Serviços', icon: 'ti-stethoscope', segmentos: ['clinicas'] },
       ] },
     ];
     // item sem "segmentos" aparece pra todos os segmentos; o segmento "todos" (Geral)
@@ -9744,10 +9757,10 @@ class Component extends DCLogic {
       financeiro: ['Financeiro', 'Contas a pagar, a receber e fluxo de caixa'],
       compras: ['Compras', 'Ordens de compra e recebimentos'],
       despesas: ['Despesas', 'Controle de gastos por categoria'],
-      estoque: isEventos ? ['Produtos', 'Produtos vendidos no evento (comidas, bebidas, itens à venda)'] : ['Produtos', 'Produtos e níveis de inventário'],
-      clientes: ['Clientes', 'Sua carteira de clientes'],
+      estoque: isClinicas ? ['Materiais', 'Materiais e insumos da clínica, com aviso de estoque baixo'] : isEventos ? ['Produtos', 'Produtos vendidos no evento (comidas, bebidas, itens à venda)'] : ['Produtos', 'Produtos e níveis de inventário'],
+      clientes: isClinicas ? ['Pacientes', 'Cadastro de pacientes da clínica'] : ['Clientes', 'Sua carteira de clientes'],
       fornecedores: ['Fornecedores', 'Parceiros e condições comerciais'],
-      produtos: isImobiliaria ? ['Imóveis', 'Catálogo de imóveis por tipo'] : isEventos ? ['Eventos', 'Seus eventos, organizados por tipo'] : ['Produtos', 'Catálogo de produtos por tipo'],
+      produtos: isImobiliaria ? ['Imóveis', 'Catálogo de imóveis por tipo'] : isEventos ? ['Eventos', 'Seus eventos, organizados por tipo'] : isClinicas ? ['Serviços', 'Consultas, exames e procedimentos, por especialidade'] : ['Produtos', 'Catálogo de produtos por tipo'],
       atendimento: ['Atendimento', 'Central de mensagens e conversas'],
       painelAtendimento: ['Painel de Atendimento', 'Métricas de resposta, funil e agendamentos em um só lugar'],
       funil: ['Funil de Vendas', 'Posição de cada cliente no funil, do primeiro contato ao fechamento'],
@@ -9757,7 +9770,7 @@ class Component extends DCLogic {
       chatinterno: ['Chat Interno', 'Converse com a equipe sem passar pelo WhatsApp'],
       configuracoes: ['Configurações', 'Gerencie seu perfil e preferências'],
     };
-    const addLabels = { financeiro: 'Novo Lançamento', vendas: 'Nova Venda', ordens_servico: 'Nova OS', quadro: 'Nova OS', compras: 'Nova Ordem', despesas: 'Nova Despesa', estoque: 'Novo Produto', clientes: 'Novo Cliente', fornecedores: 'Novo Fornecedor', produtos: isImobiliaria ? 'Novo Tipo de Imóvel' : isEventos ? 'Novo Tipo de Evento' : 'Nova Categoria' };
+    const addLabels = { financeiro: 'Novo Lançamento', vendas: 'Nova Venda', ordens_servico: 'Nova OS', quadro: 'Nova OS', compras: 'Nova Ordem', despesas: 'Nova Despesa', estoque: isClinicas ? 'Novo Material' : 'Novo Produto', clientes: isClinicas ? 'Novo Paciente' : 'Novo Cliente', fornecedores: 'Novo Fornecedor', produtos: isImobiliaria ? 'Novo Tipo de Imóvel' : isEventos ? 'Novo Tipo de Evento' : isClinicas ? 'Nova Especialidade' : 'Nova Categoria' };
 
     // toasts
     const toasts = S.toasts.map(t => ({
@@ -9781,7 +9794,7 @@ class Component extends DCLogic {
       showAdd: ['vendas', 'ordens_servico', 'quadro', 'compras', 'despesas', 'financeiro', 'estoque', 'clientes', 'fornecedores', 'produtos'].includes(tab) && !S.viewCompra && !S.viewOS, addLabel: addLabels[tab] || '', openAdd: () => this.openAdd(),
       stop: (e) => e.stopPropagation(),
       // modal
-      showModal: !!S.modal, modalTitle: { excluir_empresa: 'Excluir empresa', respostas_rapidas: 'Respostas rápidas', etiquetas_gerenciar: 'Etiquetas', conta_fin: (S.form && S.form._id) ? 'Editar conta' : 'Nova conta', transferencia_fin: 'Transferir entre contas', orcamento_fin: 'Limite mensal da categoria', cobranca_fin: 'Cobrar pelo WhatsApp', novo_lancamento: (S.form && S.form._id) ? 'Editar lançamento' : 'Novo lançamento', baixa_lancamento: 'Dar baixa', nova_venda: 'Nova Venda', nova_os: 'Nova Ordem de Serviço', nova_compra: 'Nova Ordem de Compra', nova_despesa: 'Nova Despesa', novo_produto: 'Novo Produto', novo_cliente: 'Novo Cliente', novo_fornecedor: 'Novo Fornecedor', nova_categoria: (S.form && S.form._id) ? (isImobiliaria ? 'Editar Tipo de Imóvel' : isEventos ? 'Editar Tipo de Evento' : 'Editar Categoria') : (isImobiliaria ? 'Novo Tipo de Imóvel' : isEventos ? 'Novo Tipo de Evento' : 'Nova Categoria'), subcategoria: (S.form && S.form._id) ? (isImobiliaria ? 'Editar Imóvel' : isEventos ? 'Editar Evento' : 'Editar Subcategoria') : (isImobiliaria ? 'Novo Imóvel' : isEventos ? 'Novo Evento' : 'Nova Subcategoria'), config_agente: S.form && S.form.id ? 'Configurar Agente' : 'Novo Agente', config_canal: S.form && S.form._new ? 'Adicionar Canal' : 'Configurar Canal', conectar_wpp: 'Conectar WhatsApp', nova_conversa: 'Nova Conversa', renomear_conv: 'Renomear Contato', add_cliente_conv: 'Adicionar aos Clientes', excluir_conv: 'Excluir Conversa', novo_agendamento: 'Novo Agendamento', gcal_config: 'Sincronizar Google Agenda', drive_config: 'Fotos do Catálogo via Google Drive', catalogo_picker: 'Enviar fotos do catálogo', nova_empresa: 'Nova Empresa', novo_funcionario: 'Novo Funcionário', excluir_funcionario: 'Remover Funcionário', novo_dev: 'Novo Desenvolvedor', excluir_dev: 'Remover Desenvolvedor', novo_admin_empresa: 'Novo Admin para Empresa', gravando_audio: 'Gravar áudio', disparo_massa: 'Disparo em massa' }[S.modal] || '',
+      showModal: !!S.modal, modalTitle: { excluir_empresa: 'Excluir empresa', respostas_rapidas: 'Respostas rápidas', etiquetas_gerenciar: 'Etiquetas', conta_fin: (S.form && S.form._id) ? 'Editar conta' : 'Nova conta', transferencia_fin: 'Transferir entre contas', orcamento_fin: 'Limite mensal da categoria', cobranca_fin: 'Cobrar pelo WhatsApp', novo_lancamento: (S.form && S.form._id) ? 'Editar lançamento' : 'Novo lançamento', baixa_lancamento: 'Dar baixa', nova_venda: 'Nova Venda', nova_os: 'Nova Ordem de Serviço', nova_compra: 'Nova Ordem de Compra', nova_despesa: 'Nova Despesa', novo_produto: isClinicas ? 'Novo Material' : 'Novo Produto', novo_cliente: isClinicas ? 'Novo Paciente' : 'Novo Cliente', novo_fornecedor: 'Novo Fornecedor', nova_categoria: (S.form && S.form._id) ? (isImobiliaria ? 'Editar Tipo de Imóvel' : isEventos ? 'Editar Tipo de Evento' : isClinicas ? 'Editar Especialidade' : 'Editar Categoria') : (isImobiliaria ? 'Novo Tipo de Imóvel' : isEventos ? 'Novo Tipo de Evento' : isClinicas ? 'Nova Especialidade' : 'Nova Categoria'), subcategoria: (S.form && S.form._id) ? (isImobiliaria ? 'Editar Imóvel' : isEventos ? 'Editar Evento' : isClinicas ? 'Editar Serviço' : 'Editar Subcategoria') : (isImobiliaria ? 'Novo Imóvel' : isEventos ? 'Novo Evento' : isClinicas ? 'Novo Serviço' : 'Nova Subcategoria'), config_agente: S.form && S.form.id ? 'Configurar Agente' : 'Novo Agente', config_canal: S.form && S.form._new ? 'Adicionar Canal' : 'Configurar Canal', conectar_wpp: 'Conectar WhatsApp', nova_conversa: 'Nova Conversa', renomear_conv: 'Renomear Contato', add_cliente_conv: 'Adicionar aos Clientes', excluir_conv: 'Excluir Conversa', novo_agendamento: 'Novo Agendamento', gcal_config: 'Sincronizar Google Agenda', drive_config: 'Fotos do Catálogo via Google Drive', catalogo_picker: 'Enviar fotos do catálogo', nova_empresa: 'Nova Empresa', novo_funcionario: 'Novo Funcionário', excluir_funcionario: 'Remover Funcionário', novo_dev: 'Novo Desenvolvedor', excluir_dev: 'Remover Desenvolvedor', novo_admin_empresa: 'Novo Admin para Empresa', gravando_audio: 'Gravar áudio', disparo_massa: 'Disparo em massa' }[S.modal] || '',
       m_excluirempresa: S.modal === 'excluir_empresa', m_respostas: S.modal === 'respostas_rapidas', m_etiquetas: S.modal === 'etiquetas_gerenciar', m_contafin: S.modal === 'conta_fin', m_transferencia: S.modal === 'transferencia_fin', m_orcamento: S.modal === 'orcamento_fin', m_cobranca: S.modal === 'cobranca_fin', m_lancamento: S.modal === 'novo_lancamento', m_baixa: S.modal === 'baixa_lancamento', m_venda: S.modal === 'nova_venda', m_os: S.modal === 'nova_os', m_compra: S.modal === 'nova_compra', m_despesa: S.modal === 'nova_despesa', m_produto: S.modal === 'novo_produto', m_cliente: S.modal === 'novo_cliente', m_fornecedor: S.modal === 'novo_fornecedor', m_categoria: S.modal === 'nova_categoria', m_subcategoria: S.modal === 'subcategoria',
       m_agente: S.modal === 'config_agente', m_canal: S.modal === 'config_canal', m_wpp: S.modal === 'conectar_wpp', m_novaconv: S.modal === 'nova_conversa',
       m_renomear: S.modal === 'renomear_conv', m_addcli: S.modal === 'add_cliente_conv', m_excluirconv: S.modal === 'excluir_conv', m_agendamento: S.modal === 'novo_agendamento', m_gcal: S.modal === 'gcal_config', m_drive: S.modal === 'drive_config', m_catpicker: S.modal === 'catalogo_picker', m_novaempresa: S.modal === 'nova_empresa', m_novofuncionario: S.modal === 'novo_funcionario', m_excluirfuncionario: S.modal === 'excluir_funcionario', m_novodev: S.modal === 'novo_dev', m_excluirdev: S.modal === 'excluir_dev', m_novoadminempresa: S.modal === 'novo_admin_empresa', m_gravando: S.modal === 'gravando_audio', m_disparo: S.modal === 'disparo_massa',
@@ -10920,15 +10933,15 @@ class Component extends DCLogic {
     // ===== PRODUTOS (CATÁLOGO: categorias > subcategorias) =====
     vm.isProdutos = tab === 'produtos';
     if (vm.isProdutos) {
-      vm.produtosSubLabel = isImobiliaria ? 'Imóvel' : isEventos ? 'Evento' : 'Subcategoria';
-      vm.produtosSubEmptyMsg = isImobiliaria ? 'Nenhum imóvel ainda. Clique em "Imóvel" para adicionar.' : isEventos ? 'Nenhum evento ainda. Clique em "Evento" para adicionar.' : 'Nenhuma subcategoria ainda. Clique em "Subcategoria" para adicionar.';
-      vm.produtosCatEmptyMsg = isImobiliaria ? 'Nenhum tipo de imóvel cadastrado ainda. Clique em "+ Novo Tipo de Imóvel" para começar seu catálogo.' : isEventos ? 'Nenhum tipo de evento cadastrado ainda. Clique em "+ Novo Tipo de Evento" para começar seu catálogo.' : 'Nenhuma categoria cadastrada ainda. Clique em "+ Nova Categoria" para começar seu catálogo.';
-      vm.catNomeLabel = isImobiliaria ? 'Nome do tipo de imóvel' : isEventos ? 'Nome do tipo de evento' : 'Nome da categoria';
-      vm.catNomePlaceholder = isImobiliaria ? 'ex: Apartamento' : isEventos ? 'ex: Casamento' : 'ex: Convites';
-      vm.catHelpText = isImobiliaria ? 'Depois de criar o tipo, cadastre os imóveis dentro dele (ex: Apto 2 quartos Centro) — cada imóvel tem sua própria descrição e fotos.' : isEventos ? 'Depois de criar o tipo, cadastre os eventos dentro dele (ex: Réveillon 2026, Formatura Turma 2026) — cada evento tem seus próprios dados: data, regras, lotes de preço e fotos.' : 'Depois de criar a categoria, adicione subcategorias dentro dela (ex: Casamento, 15 anos, Bodas) — cada subcategoria tem sua própria descrição e imagens de modelos.';
-      vm.subNomeLabel = isImobiliaria ? 'Nome do imóvel' : isEventos ? 'Nome do evento' : 'Nome da subcategoria';
-      vm.subNomePlaceholder = isImobiliaria ? 'ex: Apto 2 quartos - Centro' : isEventos ? 'ex: Réveillon 2026' : 'ex: Casamento';
-      vm.subDescPlaceholder = isImobiliaria ? 'Endereço, área, quartos, vagas, valor e outras informações do imóvel' : isEventos ? 'Atrações, estrutura, o que está incluso e outras informações do evento' : 'Descreva brevemente o que são esses produtos';
+      vm.produtosSubLabel = isImobiliaria ? 'Imóvel' : isEventos ? 'Evento' : isClinicas ? 'Serviço' : 'Subcategoria';
+      vm.produtosSubEmptyMsg = isImobiliaria ? 'Nenhum imóvel ainda. Clique em "Imóvel" para adicionar.' : isClinicas ? 'Nenhum serviço ainda. Clique em "Serviço" para adicionar.' : isEventos ? 'Nenhum evento ainda. Clique em "Evento" para adicionar.' : 'Nenhuma subcategoria ainda. Clique em "Subcategoria" para adicionar.';
+      vm.produtosCatEmptyMsg = isClinicas ? 'Nenhuma especialidade cadastrada ainda. Clique em "+ Nova Especialidade" para montar a lista de serviços da clínica.' : isImobiliaria ? 'Nenhum tipo de imóvel cadastrado ainda. Clique em "+ Novo Tipo de Imóvel" para começar seu catálogo.' : isEventos ? 'Nenhum tipo de evento cadastrado ainda. Clique em "+ Novo Tipo de Evento" para começar seu catálogo.' : 'Nenhuma categoria cadastrada ainda. Clique em "+ Nova Categoria" para começar seu catálogo.';
+      vm.catNomeLabel = isImobiliaria ? 'Nome do tipo de imóvel' : isClinicas ? 'Nome da especialidade' : isEventos ? 'Nome do tipo de evento' : 'Nome da categoria';
+      vm.catNomePlaceholder = isImobiliaria ? 'ex: Apartamento' : isClinicas ? 'ex: Odontologia' : isEventos ? 'ex: Casamento' : 'ex: Convites';
+      vm.catHelpText = isClinicas ? 'Depois de criar a especialidade, cadastre os serviços dentro dela (ex: Limpeza dental, Clareamento) — cada serviço tem sua descrição, valores e fotos.' : isImobiliaria ? 'Depois de criar o tipo, cadastre os imóveis dentro dele (ex: Apto 2 quartos Centro) — cada imóvel tem sua própria descrição e fotos.' : isEventos ? 'Depois de criar o tipo, cadastre os eventos dentro dele (ex: Réveillon 2026, Formatura Turma 2026) — cada evento tem seus próprios dados: data, regras, lotes de preço e fotos.' : 'Depois de criar a categoria, adicione subcategorias dentro dela (ex: Casamento, 15 anos, Bodas) — cada subcategoria tem sua própria descrição e imagens de modelos.';
+      vm.subNomeLabel = isImobiliaria ? 'Nome do imóvel' : isClinicas ? 'Nome do serviço' : isEventos ? 'Nome do evento' : 'Nome da subcategoria';
+      vm.subNomePlaceholder = isImobiliaria ? 'ex: Apto 2 quartos - Centro' : isClinicas ? 'ex: Limpeza dental' : isEventos ? 'ex: Réveillon 2026' : 'ex: Casamento';
+      vm.subDescPlaceholder = isClinicas ? 'Duração, preparo, valor particular, convênios aceitos e outras informações do serviço' : isImobiliaria ? 'Endereço, área, quartos, vagas, valor e outras informações do imóvel' : isEventos ? 'Atrações, estrutura, o que está incluso e outras informações do evento' : 'Descreva brevemente o que são esses produtos';
       vm.subDescLabel = isEventos ? 'Resumo do evento' : 'Breve descrição';
       vm.subIsEventos = isEventos;
       vm.subNaoEventos = !isEventos;

@@ -117,6 +117,7 @@ module.exports = async (req, res) => {
     const segmento = await resolveSegmento(empresaId, SUPA_SERVICE_KEY);
     const isImobiliaria = segmento === 'imobiliaria';
     const isEventos = segmento === 'eventos';
+    const isClinicas = segmento === 'clinicas';
 
     // config enviada pelo app (tem prioridade sobre as variáveis de ambiente)
     const cfg = (await readConfig(empresaId)) || {};
@@ -216,12 +217,14 @@ module.exports = async (req, res) => {
     const catalogo = await fetchCatalogo(empresaId);
     const catalogoText = buildCatalogoPrompt(catalogo);
 
-    const itemSing = isImobiliaria ? 'imóvel' : isEventos ? 'evento' : 'produto';
-    const itemPlural = isImobiliaria ? 'imóveis' : isEventos ? 'eventos' : 'produtos';
+    const itemSing = isImobiliaria ? 'imóvel' : isEventos ? 'evento' : isClinicas ? 'serviço' : 'produto';
+    const itemPlural = isImobiliaria ? 'imóveis' : isEventos ? 'eventos' : isClinicas ? 'serviços' : 'produtos';
     const catalogoLabel = isImobiliaria
       ? 'CATÁLOGO DE IMÓVEIS DISPONÍVEIS (tipo > imóvel [id]: descrição (tags de estilo disponíveis, se houver))'
       : isEventos
       ? 'CATÁLOGO DE EVENTOS DISPONÍVEL (tipo de evento > evento [id]: descrição, data, regras e lotes de preço, se houver)'
+      : isClinicas
+      ? 'SERVIÇOS DA CLÍNICA (especialidade > serviço [id]: descrição — duração, preparo, valores, convênios, se houver)'
       : 'CATÁLOGO DE PRODUTOS DISPONÍVEL (categoria > subcategoria [id]: descrição (tags de estilo disponíveis, se houver))';
     // data/hora de Brasília — precisa vir ANTES do prompt (jsonFormatNote usa dataHojeBR;
     // declarada depois, a const quebrava toda resposta com ReferenceError)
@@ -275,6 +278,9 @@ module.exports = async (req, res) => {
       ? 'Quando o cliente demonstrar intenção REAL de negociar (pediu mais informações de um imóvel específico, disse que quer visitar ou perguntou sobre condições), colete as informações na seguinte ORDEM, uma pergunta por vez: (1) primeiro, se busca COMPRAR ou ALUGAR; (2) depois, a FAIXA DE VALOR/orçamento disponível; (3) depois, o BAIRRO ou região de preferência e o tipo de imóvel (apartamento, casa, terreno). Só pergunte sobre agendar uma VISITA depois de já ter essas informações, e somente quando um imóvel específico do catálogo atender ao que ele procura.'
       : isEventos
       ? 'Cada evento do catálogo já tem sua própria DATA fixa — não pergunte "qual data" como se o cliente fosse escolher, a não ser pra ajudar a identificar QUAL evento ele quer entre vários disponíveis. Quando o cliente demonstrar intenção REAL de garantir presença/comprar (perguntou sobre um evento específico, quis saber valores, disse que quer ir ou reservar), colete as informações na seguinte ORDEM, uma pergunta por vez: (1) primeiro, confirme QUAL evento é (se ainda não estiver claro, apresente as opções do catálogo que combinam com o que ele descreveu); (2) depois, a QUANTIDADE de ingressos/convidados que ele quer garantir; (3) então informe o LOTE vigente e o valor (baseado na data de hoje) e pergunte se ele confirma a reserva/compra nessas condições. Informe a DATA do evento e as REGRAS sempre que relevante para a decisão dele. Só marque "agendamentoFechado" quando ele confirmar claramente que quer garantir a vaga/fechar a compra.'
+      : isClinicas
+      ? 'Quando o paciente demonstrar intenção REAL de ser atendido (quer marcar consulta, exame ou procedimento, ou perguntou valores/disponibilidade), colete as informações na seguinte ORDEM, uma pergunta por vez: (1) primeiro, QUAL serviço ou especialidade ele procura (se ele descrever só o que sente, ajude a identificar a especialidade adequada do catálogo, sem diagnosticar); (2) depois, se o atendimento será PARTICULAR ou por CONVÊNIO (e qual convênio); (3) depois, a preferência de DIA e PERÍODO/horário. Então proponha o agendamento e só marque "agendamentoFechado" quando ele confirmar a data e o horário.\n'
+        + '== CUIDADOS DE SAÚDE (OBRIGATÓRIO) ==\nVocê é atendimento administrativo da clínica, não um profissional de saúde: NUNCA dê diagnóstico, opinião clínica, interpretação de exame, nem indique ou ajuste medicamento/dose — nesses casos, diga com gentileza que isso precisa ser avaliado pelo profissional na consulta e ofereça o agendamento. Se o paciente relatar sinais de URGÊNCIA ou EMERGÊNCIA (ex: dor no peito, falta de ar, sangramento intenso, desmaio, sinais de AVC, pensamentos de se machucar), oriente IMEDIATAMENTE a procurar o pronto-socorro mais próximo ou ligar para o SAMU (192) e marque "precisaHumano": true. Não peça informações de saúde além do necessário para o agendamento e trate tudo o que o paciente contar com discrição.'
       : 'Quando o cliente demonstrar intenção REAL de fechar negócio (pediu orçamento, disse que quer comprar/fechar, perguntou como pagar ou como proceder), colete as informações na seguinte ORDEM, uma pergunta por vez: (1) primeiro, se ele já tem as MEDIDAS definidas da caixa (dimensões); (2) depois, a QUANTIDADE de caixas desejada; (3) depois, se ele já tem a IDENTIDADE VISUAL pronta (logo, cores, arte) ou se precisa de ajuda com isso. Só pergunte a DATA do evento depois de já ter essas três informações, e somente se for realmente necessário para prazo de produção/entrega.';
     const system = (cfg.prompt || process.env.AGENT_PROMPT || DEFAULT_PROMPT)
       + '\n\n== POSTURA E CONDUÇÃO DE VENDAS ==\n'
@@ -284,6 +290,8 @@ module.exports = async (req, res) => {
         ? 'NÃO tente marcar uma visita enquanto o cliente ainda está só explorando, pedindo informações ou fotos de imóveis. Antes disso, foque em entender o que ele procura e apresentar o catálogo.'
         : isEventos
         ? 'NÃO tente fechar a reserva/venda enquanto o cliente ainda está só explorando os eventos disponíveis ou pedindo mais informações/fotos. Antes disso, foque em entender o que ele procura e apresentar o catálogo.'
+        : isClinicas
+        ? 'Trate quem escreve como paciente, com acolhimento e linguagem simples. NÃO force o agendamento enquanto ele ainda está só tirando dúvidas sobre serviços, valores ou convênios — responda e, quando fizer sentido, ofereça marcar o horário.'
         : 'NÃO peça a data do evento nem outros dados do evento enquanto o cliente ainda está só explorando, pedindo informações ou fotos. Antes disso, foque em qualificar a necessidade e apresentar o catálogo.')
       + ('\n' + qualificacaoVendas)
       + '\nFaça no máximo UMA pergunta por mensagem. Nunca bombardeie o cliente com várias perguntas de uma vez — prefira avançar aos poucos, uma coisa de cada vez.'
