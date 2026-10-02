@@ -1,0 +1,22 @@
+name: Lembretes de agendamento
+
+# Vercel Hobby só permite crons diários, insuficiente pra lembretes com
+# minutos de antecedência — por isso usamos o GitHub Actions (gratuito)
+# pra chamar o endpoint /api/lembretes periodicamente.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  chamar-lembretes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chama /api/lembretes
+        run: |
+          if [ -n "${{ secrets.LEMBRETES_CRON_SECRET }}" ]; then
+            curl -sS -X POST "https://webhook-blond-pi.vercel.app/api/lembretes" \
+              -H "Authorization: Bearer ${{ secrets.LEMBRETES_CRON_SECRET }}"
+          else
+            curl -sS -X POST "https://webhook-blond-pi.vercel.app/api/lembretes"
+          fi
