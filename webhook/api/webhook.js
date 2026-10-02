@@ -211,6 +211,16 @@ module.exports = async (req, res) => {
       : isEventos
       ? 'CATÁLOGO DE EVENTOS DISPONÍVEL (tipo de evento > evento [id]: descrição, data, regras e lotes de preço, se houver)'
       : 'CATÁLOGO DE PRODUTOS DISPONÍVEL (categoria > subcategoria [id]: descrição (tags de estilo disponíveis, se houver))';
+    // data/hora de Brasília — precisa vir ANTES do prompt (jsonFormatNote usa dataHojeBR;
+    // declarada depois, a const quebrava toda resposta com ReferenceError)
+    const agoraBR = new Date();
+    const horaBR = agoraBR.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo', hour: 'numeric', hour12: false });
+    const saudacao = Number(horaBR) < 12 ? 'Bom dia' : Number(horaBR) < 18 ? 'Boa tarde' : 'Boa noite';
+    const saudacaoConfigurada = (cfg.welcome || '').trim();
+    // data/hora completa de hoje em São Paulo — necessário pro modelo resolver referências
+    // relativas ("amanhã", "quarta-feira") em uma data/hora absoluta pro agendamentoDataISO
+    const dataHojeBR = agoraBR.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
     const jsonFormatNote = '\n\n== FORMATO DE RESPOSTA (OBRIGATÓRIO) ==\n'
       + 'Responda SOMENTE com um JSON válido (sem texto fora do JSON), no formato exato:\n'
       + '{"reply": "sua resposta completa em português do Brasil, curta e profissional, como mensagem de WhatsApp", "replyParts": ["opcional: a mesma resposta dividida em pedaços curtos, ou null"], "sendImages": true ou false, "subcategoriaId": "id da subcategoria escolhida, ou null", "estilo": "tag do estilo pedido pelo cliente (ex: floral, clássico), ou null", "estagioFunil": "estágio atual do cliente no funil de vendas", "precisaHumano": true ou false, "motivoHumano": "motivo curto, ou null", "agendamentoFechado": true ou false, "agendamentoData": "data/horário combinado, em texto legível, ou null", "agendamentoDataISO": "a mesma data/horário combinado, convertida para o formato ISO 8601 completo com fuso -03:00 (ex: 2026-08-05T17:30:00-03:00), ou null", "gerarImagem": true ou false, "promptImagem": "descrição em inglês da imagem a gerar, ou null"}\n'
@@ -246,13 +256,6 @@ module.exports = async (req, res) => {
         ? ('\n\n== LIÇÕES APRENDIDAS EM TREINAMENTO (OBRIGATÓRIO SEGUIR) ==\nDurante conversas de treinamento com a equipe, você recebeu estas orientações — siga todas elas:\n' + cfg.treinoLicoes.map((l) => '- ' + l).join('\n'))
         : '');
 
-    const agoraBR = new Date();
-    const horaBR = agoraBR.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo', hour: 'numeric', hour12: false });
-    const saudacao = Number(horaBR) < 12 ? 'Bom dia' : Number(horaBR) < 18 ? 'Boa tarde' : 'Boa noite';
-    const saudacaoConfigurada = (cfg.welcome || '').trim();
-    // data/hora completa de hoje em São Paulo — necessário pro modelo resolver referências
-    // relativas ("amanhã", "quarta-feira") em uma data/hora absoluta pro agendamentoDataISO
-    const dataHojeBR = agoraBR.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
     const qualificacaoVendas = isImobiliaria
       ? 'Quando o cliente demonstrar intenção REAL de negociar (pediu mais informações de um imóvel específico, disse que quer visitar ou perguntou sobre condições), colete as informações na seguinte ORDEM, uma pergunta por vez: (1) primeiro, se busca COMPRAR ou ALUGAR; (2) depois, a FAIXA DE VALOR/orçamento disponível; (3) depois, o BAIRRO ou região de preferência e o tipo de imóvel (apartamento, casa, terreno). Só pergunte sobre agendar uma VISITA depois de já ter essas informações, e somente quando um imóvel específico do catálogo atender ao que ele procura.'
