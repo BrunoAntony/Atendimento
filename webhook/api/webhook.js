@@ -197,6 +197,18 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ignored: true, reason: 'conversa com atendente humano (assumida durante a espera)' });
     }
 
+    // outro robô do outro lado? (sinais de comportamento — antes de gastar uma chamada à IA)
+    // desliga com cfg.detectarRobo === false; o número de treinamento nunca entra
+    const detectarRobo = cfg.detectarRobo !== false && !isTreinamento;
+    const nomeContato = msg.senderName || msg.pushName || msg.notifyName || msg.chatName || msg.name || '';
+    if (detectarRobo) {
+      const sinal = await analisarRobo(uazBase, uazToken, from, text);
+      if (sinal.robo) {
+        await pausarPorRobo(empresaId, telefoneFila, nomeContato, sinal.motivo, uazBase, uazToken, cfg.notifyNumber || NOTIFY_NUMBER_ENV);
+        return res.status(200).json({ ignored: true, reason: 'outro robô detectado: ' + sinal.motivo });
+      }
+    }
+
     const history = await fetchHistory(uazBase, uazToken, from, msgId);
     const historyNote = history ? ('\n\nHistórico recente da conversa (mais antigas primeiro):\n' + history) : '';
 
@@ -223,7 +235,7 @@ module.exports = async (req, res) => {
 
     const jsonFormatNote = '\n\n== FORMATO DE RESPOSTA (OBRIGATÓRIO) ==\n'
       + 'Responda SOMENTE com um JSON válido (sem texto fora do JSON), no formato exato:\n'
-      + '{"reply": "sua resposta completa em português do Brasil, curta e profissional, como mensagem de WhatsApp", "replyParts": ["opcional: a mesma resposta dividida em pedaços curtos, ou null"], "sendImages": true ou false, "subcategoriaId": "id da subcategoria escolhida, ou null", "estilo": "tag do estilo pedido pelo cliente (ex: floral, clássico), ou null", "estagioFunil": "estágio atual do cliente no funil de vendas", "precisaHumano": true ou false, "motivoHumano": "motivo curto, ou null", "agendamentoFechado": true ou false, "agendamentoData": "data/horário combinado, em texto legível, ou null", "agendamentoDataISO": "a mesma data/horário combinado, convertida para o formato ISO 8601 completo com fuso -03:00 (ex: 2026-08-05T17:30:00-03:00), ou null", "gerarImagem": true ou false, "promptImagem": "descrição em inglês da imagem a gerar, ou null"}\n'
+      + '{"reply": "sua resposta completa em português do Brasil, curta e profissional, como mensagem de WhatsApp", "replyParts": ["opcional: a mesma resposta dividida em pedaços curtos, ou null"], "sendImages": true ou false, "subcategoriaId": "id da subcategoria escolhida, ou null", "estilo": "tag do estilo pedido pelo cliente (ex: floral, clássico), ou null", "estagioFunil": "estágio atual do cliente no funil de vendas", "precisaHumano": true ou false, "motivoHumano": "motivo curto, ou null", "agendamentoFechado": true ou false, "agendamentoData": "data/horário combinado, em texto legível, ou null", "agendamentoDataISO": "a mesma data/horário combinado, convertida para o formato ISO 8601 completo com fuso -03:00 (ex: 2026-08-05T17:30:00-03:00), ou null", "gerarImagem": true ou false, "promptImagem": "descrição em inglês da imagem a gerar, ou null", "interlocutorRobo": true ou false}\n'
       + '\n== DIVIDIR EM VÁRIAS MENSAGENS (QUANDO NECESSÁRIO) ==\n'
       + 'Se a resposta for longa, tiver mais de uma ideia, ou responder mais de uma pergunta do cliente, divida em pedaços curtos e naturais — como uma pessoa realmente digitaria várias mensagens seguidas no WhatsApp, em vez de mandar um texto único e comprido. Preencha "replyParts" com um array dessas partes na ordem de envio (no máximo 4 partes; cada uma precisa fazer sentido sozinha, sem cortar frase no meio). "reply" continua sendo o texto completo (todas as partes juntas), usado só como resumo interno. Se a resposta já é curta e cabe bem numa mensagem só, deixe "replyParts": null.\n'
       + (catalogoText
@@ -244,6 +256,8 @@ module.exports = async (req, res) => {
       + '\n\n== TRANSFERÊNCIA PARA ATENDENTE HUMANO (OBRIGATÓRIO) ==\n'
       + 'Marque "precisaHumano": true e preencha "motivoHumano" com um resumo curto SOMENTE quando: (a) o cliente pedir explicitamente para falar com um atendente/humano/pessoa, OU (b) o cliente perguntar algo que você não sabe responder com confiança (informação que não está disponível para você, caso muito específico ou fora do que você pode resolver). Nesse caso, sua "reply" deve avisar educadamente que um atendente vai continuar o atendimento em breve — NUNCA invente uma resposta que você não tem certeza. Se não se aplicar, use "precisaHumano": false e "motivoHumano": null.\n'
       + 'Quando "precisaHumano" OU "agendamentoFechado" forem true, preencha também "resumoAtendimento": um resumo objetivo em 1 a 3 frases (não uma lista, não a conversa colada) do que o cliente quer e do que já foi combinado, pra um atendente humano entender o contexto rapidamente sem precisar ler a conversa inteira. Nos demais casos use "resumoAtendimento": null.\n'
+      + '== OUTRO ROBÔ DO OUTRO LADO ==\n'
+      + 'Marque "interlocutorRobo": true SOMENTE quando estiver claro que quem escreve do outro lado NÃO é uma pessoa, e sim outro sistema automático (robô/chatbot/resposta automática de outra empresa): menu numerado ("digite 1 para…"), aviso de "mensagem automática", apresentação como assistente virtual, a mesma mensagem repetida, ou respostas que ignoram completamente o que você disse e seguem um roteiro. Uma pessoa sendo breve, informal ou confusa NÃO é robô — na dúvida, false.\n'
       + '== AGENDAMENTO FECHADO (OBRIGATÓRIO) ==\n'
       + ('AGORA (hoje) é: ' + dataHojeBR + ', horário de Brasília. Use isso como referência pra calcular qualquer data relativa que o cliente mencionar (ex: "amanhã", "sexta-feira", "daqui 2 semanas").\n')
       + 'Marque "agendamentoFechado": true e preencha "agendamentoData" (texto legível) e "agendamentoDataISO" (data/horário resolvido no formato ISO 8601 com fuso -03:00) SOMENTE no momento em que o cliente CONFIRMAR um agendamento/data (ele concordou com uma data e horário específicos). Resolva SEMPRE a data completa (dia, mês, ano) e o horário exatos com base em "AGORA" acima — nunca deixe "agendamentoDataISO" vago ou nulo quando "agendamentoFechado" for true, a não ser que o cliente realmente não tenha dito um horário (nesse caso use um horário razoável, ex: 09:00, mas sempre preencha o dia). Nas demais mensagens use "agendamentoFechado": false, "agendamentoData": null e "agendamentoDataISO": null.'
@@ -314,6 +328,12 @@ module.exports = async (req, res) => {
       : [];
     let replyList = replyParts.length ? replyParts : (reply ? [reply] : []);
     let wantsImages = !!(parsed && parsed.sendImages && parsed.subcategoriaId);
+
+    // a IA leu a conversa inteira e achou que do outro lado é um sistema automático
+    if (detectarRobo && parsed && parsed.interlocutorRobo === true) {
+      await pausarPorRobo(empresaId, telefoneFila, nomeContato, 'a IA identificou um atendimento automático do outro lado', uazBase, uazToken, cfg.notifyNumber || NOTIFY_NUMBER_ENV);
+      return res.status(200).json({ ignored: true, reason: 'outro robô detectado pela IA' });
+    }
 
     // treinamento: o treinador ora fala COMO um cliente (pra testar a resposta), ora fala
     // SOBRE o agente (corrigindo/ensinando um comportamento) — nesses dois casos a resposta
@@ -722,6 +742,84 @@ async function createAgendamento(telefone, nome, quando, resumo, empresaId, data
   });
 }
 
+// ---------- outro robô do outro lado da conversa ----------
+// dois robôs conversando trocam mensagens sem parar (gasta a cota da IA e pode levar o
+// WhatsApp a bloquear o número). Sinais de comportamento são checados antes de chamar a IA;
+// a própria IA também avisa (campo interlocutorRobo). Ao detectar: não responde, pausa a IA
+// nessa conversa (igual à transferência pra humano) e avisa o número de notificação uma vez.
+const PADROES_ROBO = [
+  /mensagem autom[aá]tica/i,
+  /resposta autom[aá]tica/i,
+  /sou (um|uma|o|a) (assistente|atendente) virtual/i,
+  /sou (um|uma) (rob[oô]|bot|chatbot|intelig[eê]ncia artificial)/i,
+  /digite (o |a )?(n[uú]mero|op[cç][aã]o)/i,
+  /(escolha|selecione) uma (das )?(seguintes )?op[cç][oõ]es/i,
+  /op[cç][aã]o inv[aá]lida/i,
+  /(^|\n)\s*1\s*[-–.)️⃣]+\s*\S[^\n]*\n\s*2\s*[-–.)️⃣]+\s*\S/,   // menu numerado "1 - ... / 2 - ..."
+];
+function textoMsgUaz(m) {
+  let t = m.text || m.content || m.caption || (m.message && (m.message.conversation || (m.message.extendedTextMessage && m.message.extendedTextMessage.text))) || '';
+  if (t && typeof t === 'object') t = t.text || t.caption || t.body || '';
+  return typeof t === 'string' ? t : '';
+}
+const tsMs = (v) => { const n = Number(v || 0); return n > 0 && n < 1e12 ? n * 1000 : n; };
+// { robo, motivo } a partir das últimas mensagens da conversa (exportada pros testes)
+function sinaisDeRobo(msgs, agora, textoAtual) {
+  const ord = (msgs || []).map((m) => ({ fromMe: !!m.fromMe, ts: tsMs(m.messageTimestamp), texto: textoMsgUaz(m) }))
+    .filter((m) => m.ts).sort((a, b) => a.ts - b.ts);
+  // 1) a IA já respondeu demais nessa conversa em pouco tempo (qualquer tipo de loop)
+  const nossas10min = ord.filter((m) => m.fromMe && agora - m.ts <= 10 * 60000).length;
+  if (nossas10min >= 15) return { robo: true, motivo: 'a IA mandou ' + nossas10min + ' mensagens nessa conversa em 10 minutos' };
+  // 2) o outro lado respondeu quase instantaneamente às últimas 4 mensagens nossas
+  let rapidas = 0;
+  for (let i = ord.length - 1; i > 0 && rapidas < 4; i--) {
+    if (ord[i].fromMe) continue;
+    const ant = ord[i - 1];
+    if (!ant.fromMe) continue; // mensagens seguidas do cliente: olha a primeira do bloco
+    if (ord[i].ts - ant.ts <= 3000) rapidas++; else break;
+  }
+  if (rapidas >= 4) return { robo: true, motivo: 'o outro lado respondeu em até 3 segundos às últimas 4 mensagens' };
+  // 3) a mesma mensagem repetida várias vezes
+  const cont = {};
+  ord.filter((m) => !m.fromMe).slice(-12).forEach((m) => { const k = m.texto.trim().toLowerCase(); if (k.length >= 8) cont[k] = (cont[k] || 0) + 1; });
+  const repetida = Object.keys(cont).find((k) => cont[k] >= 3);
+  if (repetida) return { robo: true, motivo: 'a mesma mensagem foi repetida ' + cont[repetida] + ' vezes ("' + repetida.slice(0, 60) + '")' };
+  // 4) texto típico de resposta automática / menu de robô
+  const alvo = textoAtual || ((ord.filter((m) => !m.fromMe).pop() || {}).texto || '');
+  const padrao = PADROES_ROBO.find((re) => re.test(alvo));
+  if (padrao) return { robo: true, motivo: 'mensagem com cara de resposta automática ("' + alvo.replace(/\s+/g, ' ').slice(0, 80) + '")' };
+  return { robo: false };
+}
+async function analisarRobo(base, token, chatid, textoAtual) {
+  if (!base || !token || !chatid) return { robo: false };
+  try {
+    const r = await fetch(base + '/message/find', { method: 'POST', headers: { 'Content-Type': 'application/json', token }, body: JSON.stringify({ chatid, limit: 30, offset: 0 }) });
+    if (!r.ok) return { robo: false };
+    const d = await r.json();
+    return sinaisDeRobo(d.messages || d.data || (Array.isArray(d) ? d : []) || [], Date.now(), textoAtual);
+  } catch (e) { return { robo: false }; }
+}
+// pausa a IA nessa conversa e avisa (no máximo um aviso a cada 6h por conversa)
+async function pausarPorRobo(empresaId, telefone, nome, motivo, base, token, notifyNumber) {
+  console.log('[robo] outro robô detectado — IA pausada:', { telefone, motivo });
+  marcarConversaHumana(telefone, empresaId).catch(() => {});
+  const tel = String(telefone || '').replace(/\D/g, '');
+  let jaAvisou = false;
+  try {
+    const desde = new Date(Date.now() - 6 * 3600000).toISOString();
+    const r = await fetch(SUPA_URL + '/rest/v1/atendimento_eventos?empresa_id=eq.' + encodeURIComponent(empresaId) + '&telefone=eq.' + tel + '&tipo=eq.robo_detectado&em=gt.' + encodeURIComponent(desde) + '&select=id&limit=1', { headers: sbServiceHeaders() });
+    if (r.ok) jaAvisou = (await r.json()).length > 0;
+  } catch (e) {}
+  await registrarEvento(empresaId, telefone, 'robo_detectado');
+  if (jaAvisou || !notifyNumber) return;
+  const aviso = '🤖 *Possível robô do outro lado da conversa*\n'
+    + 'Contato: ' + (nome || telefone) + '\n'
+    + 'Telefone: ' + telefone + '\n'
+    + 'Motivo: ' + motivo + '\n\n'
+    + 'A IA parou de responder essa conversa para não ficar trocando mensagens com outro robô. Se for uma pessoa, use "Devolver para IA" no app.';
+  notifyHuman(base, token, notifyNumber, aviso).catch(() => {});
+}
+
 // ---------- métricas do atendimento + pesquisa de satisfação (script 30) ----------
 // tudo best-effort: se as tabelas ainda não existirem, só não registra — nunca
 // atrapalha a resposta ao cliente
@@ -889,6 +987,7 @@ async function geminiGenerate(system, parts, key, model, temperature, jsonMode) 
         agendamentoDataISO: { type: 'STRING', nullable: true },
         gerarImagem: { type: 'BOOLEAN' },
         promptImagem: { type: 'STRING', nullable: true },
+        interlocutorRobo: { type: 'BOOLEAN', nullable: true },
       },
       required: ['reply', 'sendImages', 'estagioFunil', 'precisaHumano', 'agendamentoFechado'],
     };
