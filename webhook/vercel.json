@@ -2,7 +2,10 @@
   "version": 2,
   "functions": {
     "api/webhook.js": {
-      "maxDuration": 30
+      "maxDuration": 120
+    },
+    "api/lembretes.js": {
+      "maxDuration": 60
     }
   }
 }
