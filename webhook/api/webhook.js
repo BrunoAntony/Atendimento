@@ -224,7 +224,7 @@ module.exports = async (req, res) => {
       : isEventos
       ? 'CATÁLOGO DE EVENTOS DISPONÍVEL (tipo de evento > evento [id]: descrição, data, regras e lotes de preço, se houver)'
       : isClinicas
-      ? 'SERVIÇOS DA CLÍNICA (especialidade > serviço [id]: descrição — duração, preparo, valores, convênios, se houver)'
+      ? 'PROCEDIMENTOS DA CLÍNICA (especialidade > procedimento [id]: descrição — VALOR)'
       : 'CATÁLOGO DE PRODUTOS DISPONÍVEL (categoria > subcategoria [id]: descrição (tags de estilo disponíveis, se houver))';
     // data/hora de Brasília — precisa vir ANTES do prompt (jsonFormatNote usa dataHojeBR;
     // declarada depois, a const quebrava toda resposta com ReferenceError)
@@ -241,7 +241,9 @@ module.exports = async (req, res) => {
       + '{"reply": "sua resposta completa em português do Brasil, curta e profissional, como mensagem de WhatsApp", "replyParts": ["opcional: a mesma resposta dividida em pedaços curtos, ou null"], "sendImages": true ou false, "subcategoriaId": "id da subcategoria escolhida, ou null", "estilo": "tag do estilo pedido pelo cliente (ex: floral, clássico), ou null", "estagioFunil": "estágio atual do cliente no funil de vendas", "precisaHumano": true ou false, "motivoHumano": "motivo curto, ou null", "agendamentoFechado": true ou false, "agendamentoData": "data/horário combinado, em texto legível, ou null", "agendamentoDataISO": "a mesma data/horário combinado, convertida para o formato ISO 8601 completo com fuso -03:00 (ex: 2026-08-05T17:30:00-03:00), ou null", "gerarImagem": true ou false, "promptImagem": "descrição em inglês da imagem a gerar, ou null", "interlocutorRobo": true ou false}\n'
       + '\n== DIVIDIR EM VÁRIAS MENSAGENS (QUANDO NECESSÁRIO) ==\n'
       + 'Se a resposta for longa, tiver mais de uma ideia, ou responder mais de uma pergunta do cliente, divida em pedaços curtos e naturais — como uma pessoa realmente digitaria várias mensagens seguidas no WhatsApp, em vez de mandar um texto único e comprido. Preencha "replyParts" com um array dessas partes na ordem de envio (no máximo 4 partes; cada uma precisa fazer sentido sozinha, sem cortar frase no meio). "reply" continua sendo o texto completo (todas as partes juntas), usado só como resumo interno. Se a resposta já é curta e cabe bem numa mensagem só, deixe "replyParts": null.\n'
-      + (catalogoText
+      + (catalogoText && isClinicas
+        ? ('Use a lista abaixo para informar ao paciente o que é cada procedimento e o valor dele. Informe SOMENTE procedimentos e valores que estão na lista — nunca invente procedimento, preço ou desconto; se o procedimento não tiver valor cadastrado ou não estiver na lista, diga que vai confirmar com a equipe. Os valores listados são particulares; para convênio, diga que a cobertura depende do plano e será confirmada pela clínica. Não há fotos: sempre responda "sendImages": false e "subcategoriaId": null.\n\n== ' + catalogoLabel + ' ==\n' + catalogoText)
+        : catalogoText
         ? ('Marque "sendImages": true e escolha o "subcategoriaId" SOMENTE quando o cliente pedir explicitamente para ver fotos, exemplos ou opções de ' + itemPlural + ', E uma das opções abaixo corresponder claramente ao que ele pediu na conversa. Se o cliente mencionar um estilo específico (ex: "quero algo floral", "tem modelo minimalista?") e essa tag aparecer na lista de tags, preencha "estilo" com essa tag (copie exatamente como está listado) — nesse caso até 3 fotos desse estilo são enviadas. Se o cliente pedir de forma genérica pra ver modelos/sugestões/opções (sem citar um estilo específico), deixe "estilo": null — nesse caso até 6 fotos variadas são enviadas automaticamente (sem repetir o mesmo modelo/tag), cada uma já com as tags dela como legenda explicando o que é aquele modelo, então sua "reply" não precisa descrever cada foto uma por uma. Preste atenção ao contexto: nunca envie fotos de uma categoria/subcategoria diferente da que o cliente está perguntando. Se o cliente não pediu fotos/exemplos, ou nenhuma opção bate com o pedido, use "sendImages": false e "subcategoriaId": null.\n\n== ' + catalogoLabel + ' ==\n' + catalogoText
           + (isEventos
             ? ('\n\n== DADOS DO EVENTO (OBRIGATÓRIO USAR QUANDO DISPONÍVEL) ==\nQuando um evento do catálogo acima tiver DATA, REGRAS, LOTES, LINK DE INGRESSOS, PRODUTOS VENDIDOS NESTE EVENTO, DOCUMENTOS ou LINKS ADICIONAIS listados, use essas informações como fonte de verdade: informe a data do evento quando perguntado, cite as regras quando relevante (ex: idade mínima, traje, itens proibidos), informe os produtos disponíveis (ex: bebidas, comidas) quando o cliente perguntar o que tem no local, e, ao falar de preço, informe SEMPRE o lote vigente pela data de hoje (nunca ofereça um lote marcado como ENCERRADO). Se um lote estiver perto de vencer, você pode mencionar isso pra criar senso de urgência, sem inventar prazos que não estão listados. Quando houver LINK DE INGRESSOS e o cliente confirmar que quer comprar/garantir presença, envie esse link pra ele finalizar. Quando houver DOCUMENTOS (ex: regulamento, mapa do local) ou LINKS ADICIONAIS (ex: lista de convidados, formulário de inscrição) e o cliente perguntar ou isso ajudar a decisão dele, envie o link certo exatamente como está listado — nunca invente um link que não esteja na lista.')
@@ -525,6 +527,8 @@ function hasPhotos(sub) {
 // preenchidos (data/regras/lotes) — sem isso, um evento cadastrado sem fotos ainda
 // ficava invisível pro agente mesmo já tendo data/preço definidos
 function hasCatalogoInfo(sub) {
+  // procedimento de clínica: nome/descrição/valor, sem fotos — entra sempre
+  if (sub.tipo === 'procedimento') return true;
   return hasPhotos(sub) || !!sub.dataInicio || !!sub.dataFim || !!sub.dataEvento || !!sub.regras || !!sub.linkIngressos
     || (Array.isArray(sub.lotes) && sub.lotes.length > 0)
     || (Array.isArray(sub.produtos) && sub.produtos.length > 0)
@@ -553,6 +557,11 @@ function buildCatalogoPrompt(catalogo) {
     if (!subs.length) continue;
     lines.push('- ' + (cat.nome || 'Categoria'));
     for (const sub of subs) {
+      if (sub.tipo === 'procedimento') {
+        const valorTxt = (sub.valor != null && sub.valor !== '') ? ('R$ ' + Number(sub.valor).toFixed(2).replace('.', ',')) : 'valor não cadastrado (não informe preço)';
+        lines.push('  - ' + (sub.nome || 'Procedimento') + ' [id: ' + sub.id + ']: ' + (sub.descricao || 'sem descrição') + ' — VALOR: ' + valorTxt);
+        continue;
+      }
       const imgs = Array.isArray(sub.imagens) ? sub.imagens : [];
       const qtd = imgs.length ? (imgs.length + ' foto(s))') : 'fotos no Google Drive)';
       const tags = [...new Set(imgs.flatMap(imgTags))];

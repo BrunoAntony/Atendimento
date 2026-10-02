@@ -1676,7 +1676,7 @@
 <x-dc>
 <helmet>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
-<script>window.__VERSATIL_BUILD__ = "1790963389507";</script>
+<script>window.__VERSATIL_BUILD__ = "1790964071913";</script>
 <style>
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;height:100%;}
@@ -1851,7 +1851,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #14b8a6;outline-offset
         <p style="margin:3px 0 0;font-size:13px;color:var(--color-text-secondary);">{{ pageSubtitle }}</p>
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <sc-if value="{{ isProdutos }}" hint-placeholder-val="{{ false }}">
+        <sc-if value="{{ mostraDriveCatalogo }}" hint-placeholder-val="{{ false }}">
           <button onClick="{{ onDriveConfig }}" title="Configurar fotos do catálogo via Google Drive" style="{{ driveStatusStyle }}"><i class="ti ti-brand-google-drive" style="font-size:16px;"></i>{{ driveStatusText }}</button>
         </sc-if>
         <sc-if value="{{ showAdd }}" hint-placeholder-val="{{ false }}">
@@ -2884,6 +2884,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #14b8a6;outline-offset
               </div>
               <sc-if value="{{ cat.open }}" hint-placeholder-val="{{ true }}">
                 <div style="padding:0 18px 18px;border-top:1px solid var(--color-border-tertiary);">
+                  <sc-if value="{{ mostraTagsEstilo }}" hint-placeholder-val="{{ true }}">
                   <!-- TAGS DE ESTILO DESTA CATEGORIA -->
                   <div style="margin-top:16px;background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:11px;padding:14px 16px;">
                     <div style="font-size:11.5px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.4px;margin-bottom:9px;">Tags de estilo desta categoria</div>
@@ -2901,6 +2902,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #14b8a6;outline-offset
                     </div>
                     <sc-if value="{{ cat.tagsEmpty }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;color:var(--color-text-secondary);margin-top:8px;">Nenhuma tag cadastrada nesta categoria ainda. Crie as tags de estilo aqui (ex: Clássico, Floral, Minimalista) e depois selecione-as em cada imagem das subcategorias dela.</div></sc-if>
                   </div>
+                  </sc-if>
                   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:16px;">
                     <sc-for list="{{ cat.subs }}" as="sc" hint-placeholder-count="2">
                       <div style="background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:11px;padding:16px;display:flex;flex-direction:column;gap:10px;">
@@ -2912,6 +2914,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #14b8a6;outline-offset
                           </div>
                         </div>
                         <div style="font-size:12.5px;color:var(--color-text-secondary);line-height:1.5;">{{ sc.descricao }}</div>
+                        <sc-if value="{{ sc.hasValor }}" hint-placeholder-val="{{ false }}"><div style="display:inline-flex;align-items:center;gap:6px;width:fit-content;background:var(--color-background-success);color:var(--color-text-success);border-radius:7px;padding:4px 10px;font-size:13px;font-weight:700;"><i class="ti ti-cash" style="font-size:15px;"></i>{{ sc.valorFmt }}</div></sc-if>
                         <sc-if value="{{ sc.hasDrive }}" hint-placeholder-val="{{ false }}">
                           <a href="{{ sc.driveUrl }}" target="_blank" rel="noopener" onClick="{{ stop }}" style="display:inline-flex;align-items:center;gap:6px;width:fit-content;background:var(--color-background-info);color:var(--color-text-info);border-radius:7px;padding:5px 10px;font-size:11.5px;font-weight:600;text-decoration:none;"><i class="ti ti-brand-google-drive" style="font-size:14px;"></i>Fotos via Drive</a>
                         </sc-if>
@@ -4763,6 +4766,12 @@ POLÍTICAS: trocas em até 7 dias com nota." style="padding:14px 15px;border:1px
               <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--color-text-secondary);">{{ subDescLabel }}
                 <textarea name="descricao" value="{{ form.descricao }}" onInput="{{ onFormChange }}" rows="3" placeholder="{{ subDescPlaceholder }}" style="padding:11px 13px;border:1px solid var(--color-border-tertiary);border-radius:9px;background:var(--color-background-primary);font-family:inherit;resize:vertical;"></textarea>
               </label>
+              <sc-if value="{{ subIsClinicas }}" hint-placeholder-val="{{ false }}">
+                <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--color-text-secondary);">Valor (R$)
+                  <input name="valor" type="number" step="0.01" min="0" value="{{ form.valor }}" onInput="{{ onFormChange }}" placeholder="0,00" style="padding:11px 13px;border:1px solid var(--color-border-tertiary);border-radius:9px;background:var(--color-background-primary);">
+                  <span style="font-weight:400;font-size:12px;">Valor particular. O agente de IA informa esse valor quando o paciente perguntar.</span>
+                </label>
+              </sc-if>
 
               <sc-if value="{{ subIsEventos }}" hint-placeholder-val="{{ false }}">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
@@ -6460,6 +6469,8 @@ class Component extends DCLogic {
   openSubcategoriaModal(catId, item) {
     this.setState({ modal: 'subcategoria', tagPickerIdx: null, form: {
       _catId: catId, _id: item ? item.id : null, nome: item ? item.nome : '', descricao: item ? item.descricao : '',
+      // segmento Clínicas: o item é um procedimento, com valor (R$)
+      valor: item && item.valor != null ? String(item.valor) : '',
       imagens: item ? (item.imagens || []).map(im => this.normImagem(im)) : [], driveFolderId: item ? (item.driveFolderId || '') : '',
       // campos exclusivos do segmento Eventos — início/término do evento, regras e lotes de preço
       // (ex: "1º lote" até uma data, "2º lote" depois). "dataEvento" (campo antigo, um dia só)
@@ -6499,6 +6510,8 @@ class Component extends DCLogic {
     const tags = [...new Set(imgs.flatMap(im => (im && Array.isArray(im.tags)) ? im.tags : []).map(t => (t || '').trim()).filter(Boolean))];
     return {
       id: sc.id, nome: sc.nome, descricao: sc.descricao || 'Sem descrição cadastrada.',
+      // procedimento de clínica: valor em destaque no cartão
+      hasValor: sc.valor != null && sc.valor !== '', valorFmt: (sc.valor != null && sc.valor !== '') ? this.fmtMoney(sc.valor) : '',
       imagensList: imgs.map((im, i) => ({ url: (im && im.url) || '', tag: (im && Array.isArray(im.tags)) ? im.tags.join(', ') : '', key: sc.id + '_' + i })),
       hasImagens: imgs.length > 0,
       hasDrive: !!sc.driveFolderId,
@@ -6611,7 +6624,10 @@ class Component extends DCLogic {
     const f = this.state.form;
     const nome = (f.nome || '').trim();
     if (!f._catId) return this.toast('error', 'Categoria não encontrada');
-    if (!nome) return this.toast('error', 'Informe o nome da subcategoria');
+    const ehClinica = ((this.state.authSession || {}).segmento) === 'clinicas';
+    if (!nome) return this.toast('error', ehClinica ? 'Informe o nome do procedimento' : 'Informe o nome da subcategoria');
+    const valorProc = String(f.valor == null ? '' : f.valor).trim() === '' ? null : Math.round(Number(String(f.valor).replace(',', '.')) * 100) / 100;
+    if (ehClinica && valorProc != null && (isNaN(valorProc) || valorProc < 0)) return this.toast('error', 'Informe um valor válido');
     const isEdit = !!f._id;
     this.setState(s => {
       const sub = {
@@ -6623,13 +6639,15 @@ class Component extends DCLogic {
         produtos: (f.produtos || []).filter(p => (p.nome || '').trim()),
         documentos: (f.documentos || []).filter(d => d.url),
       };
+      // clínica: marca como procedimento (o agente de IA lista mesmo sem fotos) e guarda o valor
+      if (ehClinica) Object.assign(sub, { tipo: 'procedimento', valor: valorProc });
       const catalogo = s.catalogo.map(c => {
         if (c.id !== f._catId) return c;
         const subcategorias = isEdit ? (c.subcategorias || []).map(x => x.id === f._id ? sub : x) : [sub, ...(c.subcategorias || [])];
         return Object.assign({}, c, { subcategorias });
       });
       return { catalogo, modal: null, form: {} };
-    }, () => { this.persistCatalogo(); this.toast('success', isEdit ? 'Subcategoria atualizada' : 'Subcategoria cadastrada'); });
+    }, () => { this.persistCatalogo(); this.toast('success', ehClinica ? (isEdit ? 'Procedimento atualizado' : 'Procedimento cadastrado') : (isEdit ? 'Subcategoria atualizada' : 'Subcategoria cadastrada')); });
   }
   deleteSubcategoria(catId, subId) {
     this.setState(s => ({ catalogo: s.catalogo.map(c => c.id !== catId ? c : Object.assign({}, c, { subcategorias: (c.subcategorias || []).filter(x => x.id !== subId) })) }), () => { this.persistCatalogo(); this.toast('info', 'Subcategoria removida'); });
@@ -9794,7 +9812,7 @@ class Component extends DCLogic {
       showAdd: ['vendas', 'ordens_servico', 'quadro', 'compras', 'despesas', 'financeiro', 'estoque', 'clientes', 'fornecedores', 'produtos'].includes(tab) && !S.viewCompra && !S.viewOS, addLabel: addLabels[tab] || '', openAdd: () => this.openAdd(),
       stop: (e) => e.stopPropagation(),
       // modal
-      showModal: !!S.modal, modalTitle: { excluir_empresa: 'Excluir empresa', respostas_rapidas: 'Respostas rápidas', etiquetas_gerenciar: 'Etiquetas', conta_fin: (S.form && S.form._id) ? 'Editar conta' : 'Nova conta', transferencia_fin: 'Transferir entre contas', orcamento_fin: 'Limite mensal da categoria', cobranca_fin: 'Cobrar pelo WhatsApp', novo_lancamento: (S.form && S.form._id) ? 'Editar lançamento' : 'Novo lançamento', baixa_lancamento: 'Dar baixa', nova_venda: 'Nova Venda', nova_os: 'Nova Ordem de Serviço', nova_compra: 'Nova Ordem de Compra', nova_despesa: 'Nova Despesa', novo_produto: isClinicas ? 'Novo Material' : 'Novo Produto', novo_cliente: isClinicas ? 'Novo Paciente' : 'Novo Cliente', novo_fornecedor: 'Novo Fornecedor', nova_categoria: (S.form && S.form._id) ? (isImobiliaria ? 'Editar Tipo de Imóvel' : isEventos ? 'Editar Tipo de Evento' : isClinicas ? 'Editar Especialidade' : 'Editar Categoria') : (isImobiliaria ? 'Novo Tipo de Imóvel' : isEventos ? 'Novo Tipo de Evento' : isClinicas ? 'Nova Especialidade' : 'Nova Categoria'), subcategoria: (S.form && S.form._id) ? (isImobiliaria ? 'Editar Imóvel' : isEventos ? 'Editar Evento' : isClinicas ? 'Editar Serviço' : 'Editar Subcategoria') : (isImobiliaria ? 'Novo Imóvel' : isEventos ? 'Novo Evento' : isClinicas ? 'Novo Serviço' : 'Nova Subcategoria'), config_agente: S.form && S.form.id ? 'Configurar Agente' : 'Novo Agente', config_canal: S.form && S.form._new ? 'Adicionar Canal' : 'Configurar Canal', conectar_wpp: 'Conectar WhatsApp', nova_conversa: 'Nova Conversa', renomear_conv: 'Renomear Contato', add_cliente_conv: 'Adicionar aos Clientes', excluir_conv: 'Excluir Conversa', novo_agendamento: 'Novo Agendamento', gcal_config: 'Sincronizar Google Agenda', drive_config: 'Fotos do Catálogo via Google Drive', catalogo_picker: 'Enviar fotos do catálogo', nova_empresa: 'Nova Empresa', novo_funcionario: 'Novo Funcionário', excluir_funcionario: 'Remover Funcionário', novo_dev: 'Novo Desenvolvedor', excluir_dev: 'Remover Desenvolvedor', novo_admin_empresa: 'Novo Admin para Empresa', gravando_audio: 'Gravar áudio', disparo_massa: 'Disparo em massa' }[S.modal] || '',
+      showModal: !!S.modal, modalTitle: { excluir_empresa: 'Excluir empresa', respostas_rapidas: 'Respostas rápidas', etiquetas_gerenciar: 'Etiquetas', conta_fin: (S.form && S.form._id) ? 'Editar conta' : 'Nova conta', transferencia_fin: 'Transferir entre contas', orcamento_fin: 'Limite mensal da categoria', cobranca_fin: 'Cobrar pelo WhatsApp', novo_lancamento: (S.form && S.form._id) ? 'Editar lançamento' : 'Novo lançamento', baixa_lancamento: 'Dar baixa', nova_venda: 'Nova Venda', nova_os: 'Nova Ordem de Serviço', nova_compra: 'Nova Ordem de Compra', nova_despesa: 'Nova Despesa', novo_produto: isClinicas ? 'Novo Material' : 'Novo Produto', novo_cliente: isClinicas ? 'Novo Paciente' : 'Novo Cliente', novo_fornecedor: 'Novo Fornecedor', nova_categoria: (S.form && S.form._id) ? (isImobiliaria ? 'Editar Tipo de Imóvel' : isEventos ? 'Editar Tipo de Evento' : isClinicas ? 'Editar Especialidade' : 'Editar Categoria') : (isImobiliaria ? 'Novo Tipo de Imóvel' : isEventos ? 'Novo Tipo de Evento' : isClinicas ? 'Nova Especialidade' : 'Nova Categoria'), subcategoria: (S.form && S.form._id) ? (isImobiliaria ? 'Editar Imóvel' : isEventos ? 'Editar Evento' : isClinicas ? 'Editar Procedimento' : 'Editar Subcategoria') : (isImobiliaria ? 'Novo Imóvel' : isEventos ? 'Novo Evento' : isClinicas ? 'Novo Procedimento' : 'Nova Subcategoria'), config_agente: S.form && S.form.id ? 'Configurar Agente' : 'Novo Agente', config_canal: S.form && S.form._new ? 'Adicionar Canal' : 'Configurar Canal', conectar_wpp: 'Conectar WhatsApp', nova_conversa: 'Nova Conversa', renomear_conv: 'Renomear Contato', add_cliente_conv: 'Adicionar aos Clientes', excluir_conv: 'Excluir Conversa', novo_agendamento: 'Novo Agendamento', gcal_config: 'Sincronizar Google Agenda', drive_config: 'Fotos do Catálogo via Google Drive', catalogo_picker: 'Enviar fotos do catálogo', nova_empresa: 'Nova Empresa', novo_funcionario: 'Novo Funcionário', excluir_funcionario: 'Remover Funcionário', novo_dev: 'Novo Desenvolvedor', excluir_dev: 'Remover Desenvolvedor', novo_admin_empresa: 'Novo Admin para Empresa', gravando_audio: 'Gravar áudio', disparo_massa: 'Disparo em massa' }[S.modal] || '',
       m_excluirempresa: S.modal === 'excluir_empresa', m_respostas: S.modal === 'respostas_rapidas', m_etiquetas: S.modal === 'etiquetas_gerenciar', m_contafin: S.modal === 'conta_fin', m_transferencia: S.modal === 'transferencia_fin', m_orcamento: S.modal === 'orcamento_fin', m_cobranca: S.modal === 'cobranca_fin', m_lancamento: S.modal === 'novo_lancamento', m_baixa: S.modal === 'baixa_lancamento', m_venda: S.modal === 'nova_venda', m_os: S.modal === 'nova_os', m_compra: S.modal === 'nova_compra', m_despesa: S.modal === 'nova_despesa', m_produto: S.modal === 'novo_produto', m_cliente: S.modal === 'novo_cliente', m_fornecedor: S.modal === 'novo_fornecedor', m_categoria: S.modal === 'nova_categoria', m_subcategoria: S.modal === 'subcategoria',
       m_agente: S.modal === 'config_agente', m_canal: S.modal === 'config_canal', m_wpp: S.modal === 'conectar_wpp', m_novaconv: S.modal === 'nova_conversa',
       m_renomear: S.modal === 'renomear_conv', m_addcli: S.modal === 'add_cliente_conv', m_excluirconv: S.modal === 'excluir_conv', m_agendamento: S.modal === 'novo_agendamento', m_gcal: S.modal === 'gcal_config', m_drive: S.modal === 'drive_config', m_catpicker: S.modal === 'catalogo_picker', m_novaempresa: S.modal === 'nova_empresa', m_novofuncionario: S.modal === 'novo_funcionario', m_excluirfuncionario: S.modal === 'excluir_funcionario', m_novodev: S.modal === 'novo_dev', m_excluirdev: S.modal === 'excluir_dev', m_novoadminempresa: S.modal === 'novo_admin_empresa', m_gravando: S.modal === 'gravando_audio', m_disparo: S.modal === 'disparo_massa',
@@ -10011,7 +10029,7 @@ class Component extends DCLogic {
     vm.showToolbar = ['vendas', 'ordens_servico', 'compras', 'despesas', 'estoque', 'clientes', 'fornecedores', 'produtos'].includes(tab) && !showDetail && !showOSDetail;
     vm.searchValue = S.search[tab] || '';
     vm.onSearch = (e) => this.setSearch(e.target.value);
-    vm.searchPlaceholder = { vendas: 'Buscar por cliente ou produto…', ordens_servico: 'Buscar por cliente…', compras: 'Buscar por fornecedor…', despesas: 'Buscar despesa…', estoque: 'Buscar produto…', clientes: 'Buscar por nome ou cidade…', fornecedores: 'Buscar por nome ou categoria…', produtos: isImobiliaria ? 'Buscar tipo de imóvel…' : isEventos ? 'Buscar tipo de evento…' : 'Buscar tipo de produto…' }[tab] || 'Buscar…';
+    vm.searchPlaceholder = { vendas: 'Buscar por cliente ou produto…', ordens_servico: 'Buscar por cliente…', compras: 'Buscar por fornecedor…', despesas: 'Buscar despesa…', estoque: 'Buscar produto…', clientes: 'Buscar por nome ou cidade…', fornecedores: 'Buscar por nome ou categoria…', produtos: isImobiliaria ? 'Buscar tipo de imóvel…' : isEventos ? 'Buscar tipo de evento…' : isClinicas ? 'Buscar especialidade…' : 'Buscar tipo de produto…' }[tab] || 'Buscar…';
     const estoqueCats = Array.from(new Set(D.estoque.map(p => p.categoria).filter(Boolean)));
     const despCats = ['Operacional', 'Pessoal', 'Marketing', 'Fornecedor', 'Outros'];
     const filterDefs = {
@@ -10932,19 +10950,24 @@ class Component extends DCLogic {
 
     // ===== PRODUTOS (CATÁLOGO: categorias > subcategorias) =====
     vm.isProdutos = tab === 'produtos';
+    // clínica: procedimentos não têm fotos — sem tags de estilo nem pasta do Google Drive
+    vm.mostraDriveCatalogo = vm.isProdutos && !isClinicas;
+    vm.mostraTagsEstilo = !isClinicas;
     if (vm.isProdutos) {
-      vm.produtosSubLabel = isImobiliaria ? 'Imóvel' : isEventos ? 'Evento' : isClinicas ? 'Serviço' : 'Subcategoria';
-      vm.produtosSubEmptyMsg = isImobiliaria ? 'Nenhum imóvel ainda. Clique em "Imóvel" para adicionar.' : isClinicas ? 'Nenhum serviço ainda. Clique em "Serviço" para adicionar.' : isEventos ? 'Nenhum evento ainda. Clique em "Evento" para adicionar.' : 'Nenhuma subcategoria ainda. Clique em "Subcategoria" para adicionar.';
+      vm.produtosSubLabel = isImobiliaria ? 'Imóvel' : isEventos ? 'Evento' : isClinicas ? 'Procedimento' : 'Subcategoria';
+      vm.produtosSubEmptyMsg = isImobiliaria ? 'Nenhum imóvel ainda. Clique em "Imóvel" para adicionar.' : isClinicas ? 'Nenhum procedimento ainda. Clique em "Procedimento" para adicionar.' : isEventos ? 'Nenhum evento ainda. Clique em "Evento" para adicionar.' : 'Nenhuma subcategoria ainda. Clique em "Subcategoria" para adicionar.';
       vm.produtosCatEmptyMsg = isClinicas ? 'Nenhuma especialidade cadastrada ainda. Clique em "+ Nova Especialidade" para montar a lista de serviços da clínica.' : isImobiliaria ? 'Nenhum tipo de imóvel cadastrado ainda. Clique em "+ Novo Tipo de Imóvel" para começar seu catálogo.' : isEventos ? 'Nenhum tipo de evento cadastrado ainda. Clique em "+ Novo Tipo de Evento" para começar seu catálogo.' : 'Nenhuma categoria cadastrada ainda. Clique em "+ Nova Categoria" para começar seu catálogo.';
       vm.catNomeLabel = isImobiliaria ? 'Nome do tipo de imóvel' : isClinicas ? 'Nome da especialidade' : isEventos ? 'Nome do tipo de evento' : 'Nome da categoria';
       vm.catNomePlaceholder = isImobiliaria ? 'ex: Apartamento' : isClinicas ? 'ex: Odontologia' : isEventos ? 'ex: Casamento' : 'ex: Convites';
-      vm.catHelpText = isClinicas ? 'Depois de criar a especialidade, cadastre os serviços dentro dela (ex: Limpeza dental, Clareamento) — cada serviço tem sua descrição, valores e fotos.' : isImobiliaria ? 'Depois de criar o tipo, cadastre os imóveis dentro dele (ex: Apto 2 quartos Centro) — cada imóvel tem sua própria descrição e fotos.' : isEventos ? 'Depois de criar o tipo, cadastre os eventos dentro dele (ex: Réveillon 2026, Formatura Turma 2026) — cada evento tem seus próprios dados: data, regras, lotes de preço e fotos.' : 'Depois de criar a categoria, adicione subcategorias dentro dela (ex: Casamento, 15 anos, Bodas) — cada subcategoria tem sua própria descrição e imagens de modelos.';
-      vm.subNomeLabel = isImobiliaria ? 'Nome do imóvel' : isClinicas ? 'Nome do serviço' : isEventos ? 'Nome do evento' : 'Nome da subcategoria';
+      vm.catHelpText = isClinicas ? 'Depois de criar a especialidade, cadastre os procedimentos dentro dela (ex: Limpeza dental, Clareamento), cada um com nome, descrição e valor.' : isImobiliaria ? 'Depois de criar o tipo, cadastre os imóveis dentro dele (ex: Apto 2 quartos Centro) — cada imóvel tem sua própria descrição e fotos.' : isEventos ? 'Depois de criar o tipo, cadastre os eventos dentro dele (ex: Réveillon 2026, Formatura Turma 2026) — cada evento tem seus próprios dados: data, regras, lotes de preço e fotos.' : 'Depois de criar a categoria, adicione subcategorias dentro dela (ex: Casamento, 15 anos, Bodas) — cada subcategoria tem sua própria descrição e imagens de modelos.';
+      vm.subNomeLabel = isImobiliaria ? 'Nome do imóvel' : isClinicas ? 'Nome do procedimento' : isEventos ? 'Nome do evento' : 'Nome da subcategoria';
       vm.subNomePlaceholder = isImobiliaria ? 'ex: Apto 2 quartos - Centro' : isClinicas ? 'ex: Limpeza dental' : isEventos ? 'ex: Réveillon 2026' : 'ex: Casamento';
-      vm.subDescPlaceholder = isClinicas ? 'Duração, preparo, valor particular, convênios aceitos e outras informações do serviço' : isImobiliaria ? 'Endereço, área, quartos, vagas, valor e outras informações do imóvel' : isEventos ? 'Atrações, estrutura, o que está incluso e outras informações do evento' : 'Descreva brevemente o que são esses produtos';
-      vm.subDescLabel = isEventos ? 'Resumo do evento' : 'Breve descrição';
+      vm.subDescPlaceholder = isClinicas ? 'O que é o procedimento, duração, preparo e outras informações para o paciente' : isImobiliaria ? 'Endereço, área, quartos, vagas, valor e outras informações do imóvel' : isEventos ? 'Atrações, estrutura, o que está incluso e outras informações do evento' : 'Descreva brevemente o que são esses produtos';
+      vm.subDescLabel = isEventos ? 'Resumo do evento' : isClinicas ? 'Descrição' : 'Breve descrição';
       vm.subIsEventos = isEventos;
-      vm.subNaoEventos = !isEventos;
+      vm.subIsClinicas = isClinicas;
+      // clínica: procedimento é só nome, descrição e valor — sem fotos, pasta do Drive ou tags
+      vm.subNaoEventos = !isEventos && !isClinicas;
       vm.formLotes = (S.form.lotes || []).map((l, idx) => ({ idx, nome: l.nome, valor: l.valor, dataLimite: l.dataLimite }));
       vm.onLoteChange = this.onLoteChange; vm.addLoteLinha = this.addLoteLinha; vm.removeLoteLinha = this.removeLoteLinha;
       vm.formLinksAdicionais = (S.form.linksAdicionais || []).map((l, idx) => ({ idx, nome: l.nome, url: l.url }));
