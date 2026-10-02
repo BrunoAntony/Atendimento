@@ -1676,7 +1676,7 @@
 <x-dc>
 <helmet>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
-<script>window.__VERSATIL_BUILD__ = "1790943877178";</script>
+<script>window.__VERSATIL_BUILD__ = "1790947429289";</script>
 <style>
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;height:100%;}
@@ -6205,7 +6205,7 @@ class Component extends DCLogic {
     try { conversasSupabase = await this.loadConversasFromSupabase(); } catch (e) { console.warn('[conversas] falha ao carregar do Supabase:', e.message || e); }
     const baseConversas = (conversasSupabase && conversasSupabase.length) ? conversasSupabase : ((saved && saved.conversas) || []);
     // remove conversas de demonstração salvas anteriormente
-    const savedConversas = baseConversas.filter(c => DEMO_IDS.indexOf(c.id) < 0 && c.nome !== 'Bruno Antony' && c.nome !== 'Vitor Gus' && c.nome !== 'Salão Maria Flor');
+    const savedConversas = baseConversas.filter(c => DEMO_IDS.indexOf(c.id) < 0 && c.nome !== 'Bruno Antony' && c.nome !== 'Vitor Gus' && c.nome !== 'Salão Maria Flor' && !this.convWppVazia(c));
     this.setState({
       agentes: ((saved && saved.agentes) || defAgentes).map(a => { a = Object.assign({}, a); a.gemini = Object.assign({ model: 'gemini-flash-latest' }, a.gemini || {}); if (/gemini-(1\.5|2\.0)/.test(a.gemini.model || '')) a.gemini.model = 'gemini-flash-latest'; if (/gemini-1\.5/.test(a.forcarModelo || '')) a.forcarModelo = ''; return a; }),
       conversas: savedConversas,
@@ -6966,6 +6966,18 @@ class Component extends DCLogic {
   }
   // ---- sincronização de conversas reais do WhatsApp (uazapi) ----
   wppConnectedChannel() { return (this.state.canais || []).find(c => c.tipo === 'WhatsApp' && c.status === 'conectado' && c.uazapi && c.uazapi.instanceToken); }
+  // chat da uazapi sem nenhuma mensagem (ou com número inválido): não entra na lista
+  wppChatVazio(ch) {
+    const chatid = ch.wa_chatid || ch.chatid || ch.id || '';
+    const phone = String(ch.phone || chatid).split('@')[0].split(':')[0].replace(/[^0-9]/g, '');
+    return (!Number(ch.wa_lastMsgTimestamp || 0) && !Number(ch.wa_unreadCount || 0)) || phone.length < 8;
+  }
+  // mesma regra pra conversas já salvas (Supabase/localStorage) antes desta correção
+  convWppVazia(c) {
+    if (!c || c.source !== 'wpp') return false;
+    const temMsg = (c.msgs && c.msgs.length) || c.previewText || Number(c.unread || 0);
+    return (!Number(c.ts || 0) && !temMsg) || this.convPhone(c).replace(/\D/g, '').length < 8;
+  }
   wppTs(ts) {
     if (!ts) return '';
     const n = Number(ts); const ms = n > 1e12 ? n : n * 1000; const d = new Date(ms);
@@ -6991,6 +7003,10 @@ class Component extends DCLogic {
       const deletedTs = this._deletedWppTs || {};
       const mapped = chats.filter(ch2 => {
         const chatid = ch2.wa_chatid || ch2.chatid || ch2.id || '';
+        // a uazapi também lista chats que nunca tiveram mensagem (contatos da agenda do
+        // celular, números inválidos como "+0") — sem data de última mensagem nem não lidas,
+        // não é conversa de verdade e só poluía a lista com "Nova conversa"
+        if (this.wppChatVazio(ch2)) return false;
         const delAt = deletedTs[chatid];
         // ignora chat recém-excluído aqui no app, a menos que já tenha mensagem nova de
         // verdade depois da exclusão (a uazapi às vezes continua listando o chat por um tempo)
