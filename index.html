@@ -1676,7 +1676,7 @@
 <x-dc>
 <helmet>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
-<script>window.__VERSATIL_BUILD__ = "1790943362292";</script>
+<script>window.__VERSATIL_BUILD__ = "1790943877178";</script>
 <style>
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;height:100%;}
@@ -3870,14 +3870,17 @@ input:focus,select:focus,textarea:focus{outline:2px solid #14b8a6;outline-offset
                     <div style="padding:24px;text-align:center;color:var(--color-text-secondary);font-size:13.5px;background:var(--color-background-secondary);border-radius:9px;">Nenhuma empresa cadastrada ainda.</div>
                   </sc-if>
                   <sc-for list="{{ empresasSegmentoList }}" as="e" hint-placeholder-count="2">
-                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border:1px solid var(--color-border-tertiary);border-radius:9px;">
-                      <span style="font-size:13.5px;font-weight:600;">{{ e.nome }}</span>
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border:1px solid var(--color-border-tertiary);border-radius:9px;flex-wrap:wrap;">
+                      <span style="font-size:13.5px;font-weight:600;margin-right:auto;min-width:140px;display:flex;align-items:center;gap:8px;">{{ e.nome }}<sc-if value="{{ e.ativa }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:700;background:var(--color-background-info);color:var(--color-text-info);border-radius:999px;padding:2px 8px;">você está nela</span></sc-if></span>
                       <select data-id="{{ e.id }}" value="{{ e.segmentoValue }}" onChange="{{ onEmpresaSegmentoChange }}" style="padding:9px 12px;border:1px solid var(--color-border-tertiary);border-radius:9px;background:var(--color-background-primary);cursor:pointer;font-size:13px;">
                         <option value="geral">Comercial — vendas, estoque e produtos</option>
                         <option value="imobiliaria">Imobiliária — sem estoque/produtos</option>
                         <option value="eventos">Eventos — venda de ingressos e organização de festas</option>
                         <option value="todos">Geral — mostra todos os itens do menu</option>
                       </select>
+                      <sc-if value="{{ e.podeExcluir }}" hint-placeholder-val="{{ true }}">
+                        <button onClick="{{ e.onExcluir }}" title="Excluir a empresa e todos os dados dela" style="display:inline-flex;align-items:center;gap:6px;background:var(--color-background-danger);color:var(--color-text-danger);border:none;border-radius:9px;padding:9px 12px;font-size:12.5px;font-weight:600;cursor:pointer;flex-shrink:0;"><i class="ti ti-trash" style="font-size:15px;"></i>Excluir</button>
+                      </sc-if>
                     </div>
                   </sc-for>
                 </div>
@@ -4463,6 +4466,23 @@ POLÍTICAS: trocas em até 7 dias com nota." style="padding:14px 15px;border:1px
               <sc-if value="{{ baixaInfo.aMais }}" hint-placeholder-val="{{ false }}">
                 <div style="display:flex;align-items:flex-start;gap:10px;background:var(--color-background-info);color:var(--color-text-info);border-radius:10px;padding:11px 13px;font-size:12.5px;line-height:1.45;"><i class="ti ti-info-circle" style="font-size:16px;flex-shrink:0;"></i>{{ baixaInfo.aMaisTexto }}</div>
               </sc-if>
+            </div>
+          </sc-if>
+
+          <!-- EXCLUIR EMPRESA (desenvolvedor) -->
+          <sc-if value="{{ m_excluirempresa }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:14px;">
+              <div style="display:flex;align-items:flex-start;gap:11px;background:var(--color-background-danger);color:var(--color-text-danger);border-radius:11px;padding:13px 15px;font-size:13px;line-height:1.5;">
+                <i class="ti ti-alert-octagon" style="font-size:20px;flex-shrink:0;"></i>
+                <div>Isto apaga <b>definitivamente</b> a empresa <b>{{ excluirEmpresaNome }}</b> e <b>todos os dados dela</b>: usuários e funcionários, conversas, agentes e canais, clientes, vendas, OS, compras, estoque, financeiro, agendamentos, etiquetas e configurações. Não dá para desfazer.</div>
+              </div>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--color-text-secondary);">Para confirmar, digite o nome da empresa: <span style="color:var(--color-text-primary);">{{ excluirEmpresaNome }}</span>
+                <input name="confirmarNome" value="{{ form.confirmarNome }}" onInput="{{ onFormChange }}" autocomplete="off" style="padding:11px 13px;border:1px solid var(--color-border-tertiary);border-radius:9px;background:var(--color-background-primary);font-weight:400;">
+              </label>
+              <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
+                <button onClick="{{ closeModal }}" style="background:var(--color-background-tertiary);color:var(--color-text-primary);border:none;border-radius:10px;padding:11px 18px;font-weight:600;font-size:14px;cursor:pointer;">Cancelar</button>
+                <button onClick="{{ onDoExcluirEmpresa }}" disabled="{{ excluirEmpresaDisabled }}" style="{{ excluirEmpresaBtnStyle }}"><i class="ti ti-trash" style="font-size:16px;"></i>{{ excluirEmpresaLabel }}</button>
+              </div>
             </div>
           </sc-if>
 
@@ -5852,6 +5872,23 @@ class Component extends DCLogic {
       this.setState(s => ({ empresasDisponiveis: (s.empresasDisponiveis || []).map(x => x.id === id ? Object.assign({}, x, { segmento }) : x) }));
       this.toast('success', 'Segmento atualizado');
     } catch (e) { this.toast('error', this.friendlyErr(e)); }
+  }
+  // ---- excluir empresa (só desenvolvedor) — apaga a empresa e TODOS os dados dela no
+  // servidor (/api/empresas DELETE → função excluir_empresa, script 31). Exige digitar o nome.
+  confirmExcluirEmpresa(e) { this.setState({ modal: 'excluir_empresa', form: { _id: e.id, _nome: e.nome, confirmarNome: '' }, excluindoEmpresa: false }); }
+  async doExcluirEmpresa() {
+    const f = this.state.form || {}, token = this.state.authSession && this.state.authSession.access_token;
+    if ((f.confirmarNome || '').trim().toLowerCase() !== (f._nome || '').trim().toLowerCase()) return this.toast('error', 'Digite o nome da empresa exatamente como aparece');
+    this.setState({ excluindoEmpresa: true });
+    try {
+      const r = await fetch(this.EMPRESAS_URL + '?id=' + encodeURIComponent(f._id), { method: 'DELETE', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ confirmarNome: f.confirmarNome }) });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+      const total = Object.values(data.apagadas || {}).reduce((a, n) => a + Number(n || 0), 0);
+      this.setState(s => ({ excluindoEmpresa: false, modal: null, form: {}, empresasDisponiveis: (s.empresasDisponiveis || []).filter(x => x.id !== f._id) }));
+      this.toast('success', 'Empresa "' + f._nome + '" excluída' + (total ? ' · ' + total + (total === 1 ? ' registro apagado' : ' registros apagados') : ''));
+      this.loadEmpresas();
+    } catch (e) { this.setState({ excluindoEmpresa: false }); this.toast('error', 'Não foi possível excluir: ' + ((e && e.message) || e)); }
   }
   async saveNovaEmpresa() {
     const nome = ((this.state.form && this.state.form.nome) || '').trim();
@@ -9717,8 +9754,8 @@ class Component extends DCLogic {
       showAdd: ['vendas', 'ordens_servico', 'quadro', 'compras', 'despesas', 'financeiro', 'estoque', 'clientes', 'fornecedores', 'produtos'].includes(tab) && !S.viewCompra && !S.viewOS, addLabel: addLabels[tab] || '', openAdd: () => this.openAdd(),
       stop: (e) => e.stopPropagation(),
       // modal
-      showModal: !!S.modal, modalTitle: { respostas_rapidas: 'Respostas rápidas', etiquetas_gerenciar: 'Etiquetas', conta_fin: (S.form && S.form._id) ? 'Editar conta' : 'Nova conta', transferencia_fin: 'Transferir entre contas', orcamento_fin: 'Limite mensal da categoria', cobranca_fin: 'Cobrar pelo WhatsApp', novo_lancamento: (S.form && S.form._id) ? 'Editar lançamento' : 'Novo lançamento', baixa_lancamento: 'Dar baixa', nova_venda: 'Nova Venda', nova_os: 'Nova Ordem de Serviço', nova_compra: 'Nova Ordem de Compra', nova_despesa: 'Nova Despesa', novo_produto: 'Novo Produto', novo_cliente: 'Novo Cliente', novo_fornecedor: 'Novo Fornecedor', nova_categoria: (S.form && S.form._id) ? (isImobiliaria ? 'Editar Tipo de Imóvel' : isEventos ? 'Editar Tipo de Evento' : 'Editar Categoria') : (isImobiliaria ? 'Novo Tipo de Imóvel' : isEventos ? 'Novo Tipo de Evento' : 'Nova Categoria'), subcategoria: (S.form && S.form._id) ? (isImobiliaria ? 'Editar Imóvel' : isEventos ? 'Editar Evento' : 'Editar Subcategoria') : (isImobiliaria ? 'Novo Imóvel' : isEventos ? 'Novo Evento' : 'Nova Subcategoria'), config_agente: S.form && S.form.id ? 'Configurar Agente' : 'Novo Agente', config_canal: S.form && S.form._new ? 'Adicionar Canal' : 'Configurar Canal', conectar_wpp: 'Conectar WhatsApp', nova_conversa: 'Nova Conversa', renomear_conv: 'Renomear Contato', add_cliente_conv: 'Adicionar aos Clientes', excluir_conv: 'Excluir Conversa', novo_agendamento: 'Novo Agendamento', gcal_config: 'Sincronizar Google Agenda', drive_config: 'Fotos do Catálogo via Google Drive', catalogo_picker: 'Enviar fotos do catálogo', nova_empresa: 'Nova Empresa', novo_funcionario: 'Novo Funcionário', excluir_funcionario: 'Remover Funcionário', novo_dev: 'Novo Desenvolvedor', excluir_dev: 'Remover Desenvolvedor', novo_admin_empresa: 'Novo Admin para Empresa', gravando_audio: 'Gravar áudio', disparo_massa: 'Disparo em massa' }[S.modal] || '',
-      m_respostas: S.modal === 'respostas_rapidas', m_etiquetas: S.modal === 'etiquetas_gerenciar', m_contafin: S.modal === 'conta_fin', m_transferencia: S.modal === 'transferencia_fin', m_orcamento: S.modal === 'orcamento_fin', m_cobranca: S.modal === 'cobranca_fin', m_lancamento: S.modal === 'novo_lancamento', m_baixa: S.modal === 'baixa_lancamento', m_venda: S.modal === 'nova_venda', m_os: S.modal === 'nova_os', m_compra: S.modal === 'nova_compra', m_despesa: S.modal === 'nova_despesa', m_produto: S.modal === 'novo_produto', m_cliente: S.modal === 'novo_cliente', m_fornecedor: S.modal === 'novo_fornecedor', m_categoria: S.modal === 'nova_categoria', m_subcategoria: S.modal === 'subcategoria',
+      showModal: !!S.modal, modalTitle: { excluir_empresa: 'Excluir empresa', respostas_rapidas: 'Respostas rápidas', etiquetas_gerenciar: 'Etiquetas', conta_fin: (S.form && S.form._id) ? 'Editar conta' : 'Nova conta', transferencia_fin: 'Transferir entre contas', orcamento_fin: 'Limite mensal da categoria', cobranca_fin: 'Cobrar pelo WhatsApp', novo_lancamento: (S.form && S.form._id) ? 'Editar lançamento' : 'Novo lançamento', baixa_lancamento: 'Dar baixa', nova_venda: 'Nova Venda', nova_os: 'Nova Ordem de Serviço', nova_compra: 'Nova Ordem de Compra', nova_despesa: 'Nova Despesa', novo_produto: 'Novo Produto', novo_cliente: 'Novo Cliente', novo_fornecedor: 'Novo Fornecedor', nova_categoria: (S.form && S.form._id) ? (isImobiliaria ? 'Editar Tipo de Imóvel' : isEventos ? 'Editar Tipo de Evento' : 'Editar Categoria') : (isImobiliaria ? 'Novo Tipo de Imóvel' : isEventos ? 'Novo Tipo de Evento' : 'Nova Categoria'), subcategoria: (S.form && S.form._id) ? (isImobiliaria ? 'Editar Imóvel' : isEventos ? 'Editar Evento' : 'Editar Subcategoria') : (isImobiliaria ? 'Novo Imóvel' : isEventos ? 'Novo Evento' : 'Nova Subcategoria'), config_agente: S.form && S.form.id ? 'Configurar Agente' : 'Novo Agente', config_canal: S.form && S.form._new ? 'Adicionar Canal' : 'Configurar Canal', conectar_wpp: 'Conectar WhatsApp', nova_conversa: 'Nova Conversa', renomear_conv: 'Renomear Contato', add_cliente_conv: 'Adicionar aos Clientes', excluir_conv: 'Excluir Conversa', novo_agendamento: 'Novo Agendamento', gcal_config: 'Sincronizar Google Agenda', drive_config: 'Fotos do Catálogo via Google Drive', catalogo_picker: 'Enviar fotos do catálogo', nova_empresa: 'Nova Empresa', novo_funcionario: 'Novo Funcionário', excluir_funcionario: 'Remover Funcionário', novo_dev: 'Novo Desenvolvedor', excluir_dev: 'Remover Desenvolvedor', novo_admin_empresa: 'Novo Admin para Empresa', gravando_audio: 'Gravar áudio', disparo_massa: 'Disparo em massa' }[S.modal] || '',
+      m_excluirempresa: S.modal === 'excluir_empresa', m_respostas: S.modal === 'respostas_rapidas', m_etiquetas: S.modal === 'etiquetas_gerenciar', m_contafin: S.modal === 'conta_fin', m_transferencia: S.modal === 'transferencia_fin', m_orcamento: S.modal === 'orcamento_fin', m_cobranca: S.modal === 'cobranca_fin', m_lancamento: S.modal === 'novo_lancamento', m_baixa: S.modal === 'baixa_lancamento', m_venda: S.modal === 'nova_venda', m_os: S.modal === 'nova_os', m_compra: S.modal === 'nova_compra', m_despesa: S.modal === 'nova_despesa', m_produto: S.modal === 'novo_produto', m_cliente: S.modal === 'novo_cliente', m_fornecedor: S.modal === 'novo_fornecedor', m_categoria: S.modal === 'nova_categoria', m_subcategoria: S.modal === 'subcategoria',
       m_agente: S.modal === 'config_agente', m_canal: S.modal === 'config_canal', m_wpp: S.modal === 'conectar_wpp', m_novaconv: S.modal === 'nova_conversa',
       m_renomear: S.modal === 'renomear_conv', m_addcli: S.modal === 'add_cliente_conv', m_excluirconv: S.modal === 'excluir_conv', m_agendamento: S.modal === 'novo_agendamento', m_gcal: S.modal === 'gcal_config', m_drive: S.modal === 'drive_config', m_catpicker: S.modal === 'catalogo_picker', m_novaempresa: S.modal === 'nova_empresa', m_novofuncionario: S.modal === 'novo_funcionario', m_excluirfuncionario: S.modal === 'excluir_funcionario', m_novodev: S.modal === 'novo_dev', m_excluirdev: S.modal === 'excluir_dev', m_novoadminempresa: S.modal === 'novo_admin_empresa', m_gravando: S.modal === 'gravando_audio', m_disparo: S.modal === 'disparo_massa',
       onDoExcluirFuncionario: () => this.doExcluirFuncionario(),
@@ -9729,7 +9766,7 @@ class Component extends DCLogic {
       onBrandLogoChosen: this.onBrandLogoChosen, onRemoveBrandLogo: () => this.removeBrandLogo(),
       onDoExcluirConv: () => this.doExcluirConv(),
       onSendCatalogoPicker: () => this.sendCatalogoPicker(),
-      showModalFooter: !!S.modal && S.modal !== 'cobranca_fin' && S.modal !== 'respostas_rapidas' && S.modal !== 'etiquetas_gerenciar' && S.modal !== 'conectar_wpp' && S.modal !== 'config_canal' && S.modal !== 'nova_conversa' && S.modal !== 'renomear_conv' && S.modal !== 'add_cliente_conv' && S.modal !== 'excluir_conv' && S.modal !== 'novo_agendamento' && S.modal !== 'gcal_config' && S.modal !== 'catalogo_picker' && S.modal !== 'excluir_funcionario' && S.modal !== 'excluir_dev' && S.modal !== 'gravando_audio' && S.modal !== 'disparo_massa',
+      showModalFooter: !!S.modal && S.modal !== 'excluir_empresa' && S.modal !== 'cobranca_fin' && S.modal !== 'respostas_rapidas' && S.modal !== 'etiquetas_gerenciar' && S.modal !== 'conectar_wpp' && S.modal !== 'config_canal' && S.modal !== 'nova_conversa' && S.modal !== 'renomear_conv' && S.modal !== 'add_cliente_conv' && S.modal !== 'excluir_conv' && S.modal !== 'novo_agendamento' && S.modal !== 'gcal_config' && S.modal !== 'catalogo_picker' && S.modal !== 'excluir_funcionario' && S.modal !== 'excluir_dev' && S.modal !== 'gravando_audio' && S.modal !== 'disparo_massa',
       agenteIsEdit: !!(S.form && S.form.id),
       onDeleteAgente: () => this.deleteAgente(S.form.id),
       onCanalUaChange: this.onCanalUaChange, onGeminiChange: this.onGeminiChange,
@@ -10698,6 +10735,18 @@ class Component extends DCLogic {
       const receitaForm = S.modal === 'novo_lancamento' ? (S.form && S.form.tipo === 'receita') : false;
       vm.lancContaLabel = S.form && S.form.situacao === 'pago' && !S.form._id ? (receitaForm ? 'Conta onde entrou' : 'Conta de onde saiu') : (receitaForm ? 'Conta onde vai entrar' : 'Conta de onde vai sair');
     }
+    // ===== EXCLUIR EMPRESA (desenvolvedor) =====
+    if (S.modal === 'excluir_empresa') {
+      const f = S.form || {};
+      const confere = (f.confirmarNome || '').trim().toLowerCase() === (f._nome || '').trim().toLowerCase() && !!(f._nome || '').trim();
+      vm.excluirEmpresaNome = f._nome || '';
+      vm.excluirEmpresaDisabled = !confere || !!S.excluindoEmpresa;
+      vm.excluirEmpresaLabel = S.excluindoEmpresa ? 'Excluindo…' : 'Excluir definitivamente';
+      vm.onDoExcluirEmpresa = () => this.doExcluirEmpresa();
+      vm.excluirEmpresaBtnStyle = { display: 'inline-flex', alignItems: 'center', gap: '7px', border: 'none', borderRadius: '10px', padding: '11px 18px', fontWeight: 700, fontSize: '14px',
+        cursor: vm.excluirEmpresaDisabled ? 'not-allowed' : 'pointer', background: vm.excluirEmpresaDisabled ? 'var(--color-background-tertiary)' : '#dc2626', color: vm.excluirEmpresaDisabled ? 'var(--color-text-secondary)' : '#fff' };
+    }
+
     // ===== MODAIS DO ATENDIMENTO (respostas rápidas e etiquetas) =====
     if (S.modal === 'respostas_rapidas') {
       const f = S.form || {};
@@ -11633,7 +11682,11 @@ class Component extends DCLogic {
         vm.onNovoAdminEmpresa = () => this.openNovoAdminEmpresa();
       }
       if (vm.isCfgEmpresas) {
-        vm.empresasSegmentoList = (S.empresasDisponiveis || []).map(e => ({ id: e.id, nome: e.nome, segmentoValue: e.segmento || 'geral' }));
+        const empresaAtiva = S.authSession && S.authSession.empresa_id;
+        vm.empresasSegmentoList = (S.empresasDisponiveis || []).map(e => {
+          const ativa = e.id === empresaAtiva;
+          return { id: e.id, nome: e.nome, segmentoValue: e.segmento || 'geral', ativa, podeExcluir: !ativa, onExcluir: () => this.confirmExcluirEmpresa(e) };
+        });
         vm.empresasSegmentoEmpty = vm.empresasSegmentoList.length === 0;
         vm.onEmpresaSegmentoChange = this.onEmpresaSegmentoChange;
       }
