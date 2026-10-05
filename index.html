@@ -1676,7 +1676,7 @@
 <x-dc>
 <helmet>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
-<script>window.__VERSATIL_BUILD__ = "1790964071913";</script>
+<script>window.__VERSATIL_BUILD__ = "1791201300301";</script>
 <style>
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;height:100%;}
@@ -5405,8 +5405,8 @@ POLÍTICAS: trocas em até 7 dias com nota." style="padding:14px 15px;border:1px
             <div style="display:flex;flex-direction:column;gap:16px;">
               <div style="display:flex;align-items:flex-start;gap:10px;background:var(--color-background-warning);color:var(--color-text-warning);border-radius:10px;padding:12px 14px;font-size:12.5px;line-height:1.45;"><i class="ti ti-alert-triangle" style="font-size:16px;flex-shrink:0;"></i>Envie com moderação e para contatos que já falaram com você — volumes altos ou envios para números que não te conhecem podem levar o WhatsApp a bloquear o seu número.</div>
 
-              <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--color-text-secondary);">Mensagem
-                <textarea value="{{ disparoMsg }}" onInput="{{ onDisparoMsg }}" rows="4" placeholder="Escreva a mensagem que será enviada a todos os selecionados…" style="padding:11px 13px;border:1px solid var(--color-border-tertiary);border-radius:9px;background:var(--color-background-primary);font-family:inherit;resize:vertical;"></textarea>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--color-text-secondary);">{{ disparoMsgLabel }}
+                <textarea value="{{ disparoMsg }}" onInput="{{ onDisparoMsg }}" rows="4" placeholder="{{ disparoMsgPlaceholder }}" style="padding:11px 13px;border:1px solid var(--color-border-tertiary);border-radius:9px;background:var(--color-background-primary);font-family:inherit;resize:vertical;"></textarea>
               </label>
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                 <span style="font-size:12px;color:var(--color-text-secondary);">Inserir variável:</span>
@@ -5468,6 +5468,14 @@ POLÍTICAS: trocas em até 7 dias com nota." style="padding:14px 15px;border:1px
                         </select>
                       </label>
                     </div>
+                    <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:var(--color-text-secondary);">Coluna da mensagem (envio personalizado)
+                      <select value="{{ disparoColMsg }}" onChange="{{ onDisparoColMsg }}" style="padding:8px 10px;border:1px solid var(--color-border-tertiary);border-radius:8px;background:var(--color-background-primary);font-size:13px;">
+                        <option value="">Nenhuma — mesma mensagem para todos (campo acima)</option>
+                        <sc-for list="{{ disparoColOpcoes }}" as="o" hint-placeholder-count="3"><option value="{{ o.value }}">{{ o.label }}</option></sc-for>
+                      </select>
+                      <span style="font-weight:400;font-size:11.5px;">Cada contato recebe o texto da própria linha. Variáveis como {nome} também funcionam dentro do texto da planilha.</span>
+                    </label>
+                    <sc-if value="{{ disparoTemAvisoMsg }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:var(--color-text-warning);line-height:1.45;">{{ disparoAvisoMsg }}</div></sc-if>
                     <div style="font-size:12px;color:var(--color-text-secondary);line-height:1.45;">{{ disparoLimiteAviso }}</div>
                   </div>
                 </sc-if>
@@ -7325,7 +7333,10 @@ class Component extends DCLogic {
     const pareceTel = c => linhas.filter(o => this.normalizarTelefonePlanilha(o._tel[c.key])).length >= Math.max(1, linhas.length * 0.6);
     const colTel = (colunas.find(c => /telefone|celular|whats|fone|phone|numero|contato/.test(c.key) && pareceTel(c)) || colunas.find(pareceTel) || {}).key || '';
     const colNome = (colunas.find(c => c.key !== colTel && /^(nome|cliente|name)|nome/.test(c.key)) || colunas.find(c => c.key !== colTel) || {}).key || '';
-    this.setState({ disparoPlanilha: { arquivo, colunas, linhas, colTel, colNome }, disparoBusca: '' }, () => this.selecionarPlanilhaInicial());
+    // coluna com o texto de cada contato (envio personalizado) — pelo nome do cabeçalho
+    const colMsg = (colunas.find(c => c.key !== colTel && c.key !== colNome && /mensag|msg|texto|message|recado/.test(c.key)) || {}).key || '';
+    this.setState({ disparoPlanilha: { arquivo, colunas, linhas, colTel, colNome, colMsg }, disparoBusca: '' }, () => this.selecionarPlanilhaInicial());
+    if (colMsg) this.toast('info', 'Usando a coluna "' + colunas.find(c => c.key === colMsg).label + '" como mensagem de cada contato — dá pra trocar na lista');
     if (!colTel) this.toast('info', 'Não achamos a coluna de telefone — escolha qual é na lista');
   }
   // contatos válidos da planilha (telefone ok, sem repetidos) + o que ficou de fora
@@ -7340,7 +7351,7 @@ class Component extends DCLogic {
       if (vistos.has(tel)) { out.duplicados++; return; }
       vistos.add(tel);
       const vars = {}; p.colunas.forEach(c => { vars[c.key] = o[c.key]; });
-      out.validos.push({ telefone: tel, nome: p.colNome ? o[p.colNome] : '', vars });
+      out.validos.push({ telefone: tel, nome: p.colNome ? o[p.colNome] : '', vars, mensagem: p.colMsg ? (o[p.colMsg] || '') : '' });
     });
     return out;
   }
@@ -7393,6 +7404,12 @@ class Component extends DCLogic {
   trocarPlanilha() { this.setState({ disparoPlanilha: null, disparoSel: [], disparoColagem: '' }); }
   // troca {nome} pelo primeiro nome e {coluna} pelo valor da planilha; variável sem valor
   // pra aquele contato fica como está, pra dar pra ver na prévia que faltou dado
+  // mensagem da linha da planilha (envio personalizado) ou, sem ela, a mensagem escrita no
+  // campo; as variáveis ({nome}, {coluna}) valem nas duas
+  textoDisparo(tpl, c) {
+    const base = (c && c.mensagem && String(c.mensagem).trim()) ? String(c.mensagem) : (tpl || '');
+    return String(base).trim() ? this.montarMensagemDisparo(base, c).trim() : '';
+  }
   montarMensagemDisparo(tpl, c) {
     const primeiro = (c.nome || '').trim().split(/\s+/)[0] || 'cliente';
     return String(tpl || '').replace(/\{nome\}/gi, primeiro).replace(/\{([a-z0-9_]+)\}/gi, (m, k) => (c.vars && c.vars[k.toLowerCase()] != null && c.vars[k.toLowerCase()] !== '') ? c.vars[k.toLowerCase()] : m);
@@ -7425,7 +7442,8 @@ class Component extends DCLogic {
   async enviarDisparoMassa() {
     const sel = this.state.disparoSel || [];
     const msgTpl = (this.state.disparoMsg || '').trim();
-    if (!msgTpl) return this.toast('error', 'Escreva a mensagem antes de enviar.');
+    const usaColMsg = this.state.disparoFonte === 'planilha' && !!(this.state.disparoPlanilha && this.state.disparoPlanilha.colMsg);
+    if (!msgTpl && !usaColMsg) return this.toast('error', 'Escreva a mensagem antes de enviar.');
     if (!sel.length) return this.toast('error', 'Selecione ao menos um contato.');
     const ch = (this.state.canais || []).find(c => c.tipo === 'WhatsApp' && c.uazapi && c.uazapi.instanceToken && c.status === 'conectado')
       || (this.state.canais || []).find(c => c.tipo === 'WhatsApp' && c.uazapi && c.uazapi.instanceToken);
@@ -7433,11 +7451,13 @@ class Component extends DCLogic {
     const base = this.uaBaseFor(ch.uazapi);
     const token = ch.uazapi.instanceToken;
     this.setState({ disparoBusy: true, disparoCancelar: false, disparoResultado: null, disparoProgresso: { enviados: 0, total: sel.length } });
-    let ok = 0, falhas = 0;
+    let ok = 0, falhas = 0, pulados = 0;
     for (let i = 0; i < sel.length; i++) {
       if (this.state.disparoCancelar) break;
       const c = sel[i];
-      const texto = this.montarMensagemDisparo(msgTpl, c);
+      const texto = this.textoDisparo(msgTpl, c);
+      // linha sem mensagem na planilha e sem mensagem padrão: não envia texto vazio
+      if (!texto) { pulados++; this.setState({ disparoProgresso: { enviados: i + 1, total: sel.length } }); continue; }
       try {
         await this.uaFetch(base, '/send/text', 'POST', token, { number: c.telefone, text: texto });
         ok++;
@@ -7446,8 +7466,8 @@ class Component extends DCLogic {
       if (i < sel.length - 1) await new Promise(r => setTimeout(r, 1500 + Math.random() * 1200));
     }
     const cancelado = this.state.disparoCancelar;
-    this.setState({ disparoBusy: false, disparoResultado: { ok, falhas, cancelado } });
-    this.toast(falhas ? 'info' : 'success', ok + (ok === 1 ? ' mensagem enviada' : ' mensagens enviadas') + (falhas ? ', ' + falhas + ' falharam' : '') + (cancelado ? ' (cancelado)' : '') + '.');
+    this.setState({ disparoBusy: false, disparoResultado: { ok, falhas, cancelado, pulados } });
+    this.toast(falhas || pulados ? 'info' : 'success', ok + (ok === 1 ? ' mensagem enviada' : ' mensagens enviadas') + (falhas ? ', ' + falhas + ' falharam' : '') + (pulados ? ', ' + pulados + ' sem mensagem (puladas)' : '') + (cancelado ? ' (cancelado)' : '') + '.');
   }
   // ---------- métricas do atendimento + pesquisa de satisfação (script 30) ----------
   // linha do tempo: o webhook grava cliente_msg/resposta_ia; o app grava o que acontece
@@ -9970,6 +9990,12 @@ class Component extends DCLogic {
         vm.disparoColTel = planD.colTel || '';
         vm.onDisparoColNome = (e) => this.setDisparoColuna('colNome', e.target.value);
         vm.onDisparoColTel = (e) => this.setDisparoColuna('colTel', e.target.value);
+        vm.disparoColMsg = planD.colMsg || '';
+        vm.onDisparoColMsg = (e) => this.setDisparoColuna('colMsg', e.target.value);
+        const semMsg = planD.colMsg ? contPlanD.validos.filter(c => !String(c.mensagem || '').trim()).length : 0;
+        vm.disparoTemAvisoMsg = semMsg > 0;
+        const um = semMsg === 1;
+        vm.disparoAvisoMsg = semMsg + (um ? ' contato está' : ' contatos estão') + ' com a coluna de mensagem vazia — ' + ((S.disparoMsg || '').trim() ? (um ? 'recebe' : 'recebem') + ' a mensagem padrão escrita acima.' : (um ? 'não vai' : 'não vão') + ' receber nada, a menos que você escreva uma mensagem padrão acima.');
       }
       vm.disparoLimiteAviso = fonteD === 'planilha' && planD ? 'Até ' + this.DISPARO_LIMITE_PLANILHA + ' contatos da planilha por envio. Para listas maiores, envie em partes ao longo do dia.' : '';
       const filtrosDDef = [
@@ -9999,19 +10025,22 @@ class Component extends DCLogic {
       vm.disparoMsg = S.disparoMsg || '';
       vm.onDisparoMsg = this.onDisparoMsg;
       // com planilha, cada coluna vira uma variável ({nome} continua sendo o primeiro nome)
-      const varsD = ['{nome}'].concat(fonteD === 'planilha' && planD ? planD.colunas.filter(c => c.key !== 'nome').map(c => '{' + c.key + '}') : []);
+      const varsD = ['{nome}'].concat(fonteD === 'planilha' && planD ? planD.colunas.filter(c => c.key !== 'nome' && c.key !== planD.colMsg).map(c => '{' + c.key + '}') : []);
       vm.disparoVars = varsD.map(v => ({ label: v, onClick: () => this.insertDisparoVar(v) }));
       // prévia com o 1º selecionado (ou o 1º da lista), já com as variáveis trocadas
       const exemploD = selD[0] || candidatosD[0];
-      vm.disparoTemPreview = !!(exemploD && (S.disparoMsg || '').trim());
+      const usaColMsgD = fonteD === 'planilha' && !!(planD && planD.colMsg);
+      vm.disparoMsgLabel = usaColMsgD ? 'Mensagem padrão (opcional — só para quem estiver sem mensagem na planilha)' : 'Mensagem';
+      vm.disparoMsgPlaceholder = usaColMsgD ? 'Cada contato recebe a mensagem da coluna escolhida na planilha. Escreva aqui só se quiser um texto para as linhas vazias.' : 'Escreva a mensagem que será enviada a todos os selecionados…';
+      vm.disparoTemPreview = !!(exemploD && this.textoDisparo(S.disparoMsg, exemploD));
       vm.disparoPreviewPara = exemploD ? 'Prévia para ' + (exemploD.nome || exemploD.telefone) : '';
-      vm.disparoPreview = exemploD ? this.montarMensagemDisparo(S.disparoMsg, exemploD) : '';
+      vm.disparoPreview = exemploD ? this.textoDisparo(S.disparoMsg, exemploD) : '';
       vm.disparoPreviewFalta = /\{[a-z0-9_]+\}/i.test(vm.disparoPreview) ? 'Alguma variável ficou sem valor para este contato (a coluna está vazia ou o nome está diferente do cabeçalho).' : '';
       vm.onEnviarDisparo = () => this.enviarDisparoMassa();
       vm.onCancelarDisparo = () => this.cancelarDisparoMassa();
       vm.disparoBusy = !!S.disparoBusy;
       vm.disparoNaoBusy = !S.disparoBusy;
-      vm.disparoSendDisabled = !!S.disparoBusy || !selD.length || !(S.disparoMsg || '').trim();
+      vm.disparoSendDisabled = !!S.disparoBusy || !selD.length || (!(S.disparoMsg || '').trim() && !(fonteD === 'planilha' && planD && planD.colMsg));
       vm.disparoSendStyle = { background: '#16a34a', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 20px', fontWeight: 600, fontSize: '13.5px', cursor: vm.disparoSendDisabled ? 'not-allowed' : 'pointer', opacity: vm.disparoSendDisabled ? .5 : 1 };
       const progD = S.disparoProgresso;
       vm.disparoTemProgresso = !!progD;
@@ -10020,7 +10049,7 @@ class Component extends DCLogic {
       vm.disparoProgressoBar = { width: pctD + '%', height: '100%', borderRadius: '999px', background: '#16a34a', transition: 'width .2s' };
       const resD = S.disparoResultado;
       vm.disparoTemResultado = !!resD;
-      vm.disparoResultadoLabel = resD ? (resD.ok + (resD.ok === 1 ? ' mensagem enviada' : ' mensagens enviadas') + (resD.falhas ? ', ' + resD.falhas + ' falharam' : '') + (resD.cancelado ? ' — cancelado' : '')) : '';
+      vm.disparoResultadoLabel = resD ? (resD.ok + (resD.ok === 1 ? ' mensagem enviada' : ' mensagens enviadas') + (resD.falhas ? ', ' + resD.falhas + ' falharam' : '') + (resD.pulados ? ', ' + resD.pulados + ' sem mensagem (puladas)' : '') + (resD.cancelado ? ' — cancelado' : '')) : '';
     }
 
     // search / filter toolbar
