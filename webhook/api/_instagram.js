@@ -383,18 +383,18 @@ async function handle(req, res, deps) {
       if (req.method === 'GET' && q.codigo) {
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         return res.status(200).end('<!doctype html><meta charset="utf-8"><title>Exclusão de dados</title><body style="font-family:system-ui;padding:40px;max-width:560px">'
-          + '<h2>Solicitação de exclusão de dados</h2><p>Código: <b>' + String(q.codigo).replace(/[^a-z0-9-]/gi, '') + '</b></p><p>Os dados da conta do Instagram vinculados ao Versatil (token de acesso e mensagens do Direct) foram excluídos.</p></body>');
+          + '<h2>Solicitação de exclusão de dados</h2><p>Código: <b>' + String(q.codigo).replace(/[^a-z0-9-]/gi, '') + '</b></p><p>Os dados da conta do Instagram vinculados ao Atendimento DeOli (token de acesso e mensagens do Direct) foram excluídos.</p></body>');
       }
       // aberto no navegador (é o que a Meta confere no campo "URL de instruções de exclusão de dados")
       if (req.method === 'GET') {
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        return res.status(200).end('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Exclusão de dados — Versatil</title></head>'
+        return res.status(200).end('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Exclusão de dados — Atendimento DeOli</title></head>'
           + '<body style="font-family:system-ui,sans-serif;padding:32px 20px;max-width:640px;margin:auto;line-height:1.6;color:#1f2937">'
-          + '<h1 style="font-size:22px">Como excluir seus dados do Versatil (Instagram)</h1>'
-          + '<p>O Versatil guarda, da conta do Instagram conectada pela empresa, o token de acesso, o nome de usuário e as mensagens do Direct trocadas com os clientes dessa empresa.</p>'
+          + '<h1 style="font-size:22px">Como excluir seus dados do Atendimento DeOli (Instagram)</h1>'
+          + '<p>O Atendimento DeOli guarda, da conta do Instagram conectada pela empresa, o token de acesso, o nome de usuário e as mensagens do Direct trocadas com os clientes dessa empresa.</p>'
           + '<p>Para excluir esses dados, use uma das opções:</p><ol>'
           + '<li>No Instagram, abra <b>Configurações › Apps e sites</b>, encontre o app <b>Atendimento DeOli</b> e clique em <b>Remover</b>. A remoção apaga automaticamente o token e as mensagens guardadas.</li>'
-          + '<li>No Versatil, a empresa pode clicar em <b>Agentes IA › Canais › Instagram › Desconectar</b>.</li>'
+          + '<li>No Atendimento DeOli, a empresa pode clicar em <b>Agentes IA › Canais › Instagram › Desconectar</b>.</li>'
           + (process.env.CONTATO_PRIVACIDADE ? ('<li>Ou peça a exclusão por e-mail para <b>' + String(process.env.CONTATO_PRIVACIDADE).replace(/[<>&"]/g, '') + '</b>, informando o @ da conta. Respondemos em até 30 dias.</li>') : '')
           + '</ol></body></html>');
       }
@@ -473,11 +473,11 @@ async function renovarTokens() {
 // ---------- política de privacidade ----------
 function paginaPrivacidade(contato) {
   const h2 = (t) => '<h2 style="font-size:17px;margin-top:28px">' + t + '</h2>';
-  return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Política de Privacidade — Versatil</title></head>'
+  return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Política de Privacidade — Atendimento DeOli</title></head>'
     + '<body style="font-family:system-ui,sans-serif;padding:32px 20px;max-width:720px;margin:auto;line-height:1.65;color:#1f2937">'
-    + '<h1 style="font-size:24px">Política de Privacidade — Versatil (DeOli Automações)</h1>'
+    + '<h1 style="font-size:24px">Política de Privacidade — Atendimento DeOli (DeOli Automações)</h1>'
     + '<p style="color:#6b7280">Última atualização: 05/10/2026</p>'
-    + '<p>O Versatil é um sistema de gestão e atendimento usado por empresas para conversar com seus clientes pelo WhatsApp e pelo Instagram, com apoio de inteligência artificial. Esta política explica quais dados tratamos, para quê e como você pode pedir a exclusão, conforme a Lei Geral de Proteção de Dados (LGPD).</p>'
+    + '<p>O Atendimento DeOli é um sistema de gestão e atendimento usado por empresas para conversar com seus clientes pelo WhatsApp e pelo Instagram, com apoio de inteligência artificial. Esta política explica quais dados tratamos, para quê e como você pode pedir a exclusão, conforme a Lei Geral de Proteção de Dados (LGPD).</p>'
     + h2('1. Quais dados tratamos')
     + '<ul><li><b>Da empresa que conecta a conta do Instagram:</b> identificador e nome de usuário da conta profissional e o token de acesso fornecido pela Meta.</li>'
     + '<li><b>De quem conversa com a empresa:</b> nome ou @ do Instagram, identificador da conversa, mensagens enviadas e recebidas no Direct (texto e links de mídia) e comentários que acionam respostas automáticas configuradas pela empresa.</li>'
@@ -488,7 +488,7 @@ function paginaPrivacidade(contato) {
     + h2('3. Com quem compartilhamos')
     + '<ul><li><b>Meta (Instagram/WhatsApp):</b> para receber e enviar as mensagens;</li><li><b>Google (Gemini):</b> o texto da conversa é enviado ao modelo de IA para gerar a resposta;</li><li><b>Supabase e Vercel:</b> provedores de banco de dados e hospedagem onde os dados ficam armazenados.</li></ul>'
     + h2('4. Por quanto tempo guardamos')
-    + '<p>Os dados ficam guardados enquanto a empresa usar o Versatil ou até que a exclusão seja pedida. Ao desconectar a conta do Instagram, o token de acesso é apagado imediatamente.</p>'
+    + '<p>Os dados ficam guardados enquanto a empresa usar o Atendimento DeOli ou até que a exclusão seja pedida. Ao desconectar a conta do Instagram, o token de acesso é apagado imediatamente.</p>'
     + h2('5. Seus direitos e exclusão de dados')
     + '<p>Você pode pedir acesso, correção ou exclusão dos seus dados. Para os dados do Instagram, basta remover o app em <b>Configurações › Apps e sites</b> no Instagram — o token e as mensagens guardadas são apagados automaticamente. Veja também a <a href="/instagram/exclusao">página de exclusão de dados</a>.</p>'
     + (contato ? '<p>Contato do responsável pelos dados: <b>' + contato + '</b>.</p>' : '<p>Para outros pedidos, fale com a empresa que atendeu você.</p>')
