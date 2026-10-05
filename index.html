@@ -1676,7 +1676,7 @@
 <x-dc>
 <helmet>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
-<script>window.__VERSATIL_BUILD__ = "1791208822104";</script>
+<script>window.__VERSATIL_BUILD__ = "1791235343447";</script>
 <style>
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;height:100%;}
@@ -6287,7 +6287,7 @@ class Component extends DCLogic {
     try { conversasSupabase = await this.loadConversasFromSupabase(); } catch (e) { console.warn('[conversas] falha ao carregar do Supabase:', e.message || e); }
     const baseConversas = (conversasSupabase && conversasSupabase.length) ? conversasSupabase : ((saved && saved.conversas) || []);
     // remove conversas de demonstração salvas anteriormente
-    const savedConversas = baseConversas.filter(c => DEMO_IDS.indexOf(c.id) < 0 && c.nome !== 'Bruno Antony' && c.nome !== 'Vitor Gus' && c.nome !== 'Salão Maria Flor' && !this.convWppVazia(c));
+    const savedConversas = baseConversas.filter(c => DEMO_IDS.indexOf(c.id) < 0 && (c.source === 'wpp' || c.source === 'ig' || (c.nome !== 'Bruno Antony' && c.nome !== 'Vitor Gus' && c.nome !== 'Salão Maria Flor')) && !this.convWppVazia(c));
     this.setState({
       agentes: ((saved && saved.agentes) || defAgentes).map(a => { a = Object.assign({}, a); a.gemini = Object.assign({ model: 'gemini-flash-latest' }, a.gemini || {}); if (/gemini-(1\.5|2\.0)/.test(a.gemini.model || '')) a.gemini.model = 'gemini-flash-latest'; if (/gemini-1\.5/.test(a.forcarModelo || '')) a.forcarModelo = ''; return a; }),
       conversas: savedConversas,
