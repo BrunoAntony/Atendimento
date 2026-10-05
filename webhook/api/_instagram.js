@@ -106,6 +106,12 @@ function jsonNoFormatoMeta(obj) {
 }
 // corpo cru da requisição (a assinatura da Meta é sobre os bytes exatos) — só funciona se
 // ninguém tiver lido req.body antes; sem stream (testes), devolve null
+// só ids e tipos (sem conteúdo) — para diagnóstico nos registros
+function resumoEvento(corpo) {
+  try {
+    return { object: corpo && corpo.object, entradas: ((corpo && corpo.entry) || []).map((e) => ({ conta: e.id, mensagens: (e.messaging || []).length, campos: (e.changes || []).map((c) => c.field) })) };
+  } catch (e) { return null; }
+}
 function lerCorpoBruto(req) {
   return new Promise((resolve) => {
     if (!req || typeof req.on !== 'function' || req.readableEnded) return resolve(null);
@@ -373,9 +379,10 @@ async function handle(req, res, deps) {
       const bruto = await lerCorpoBruto(req);
       const corpo = bruto ? JSON.parse(bruto || '{}') : (typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {}));
       if (!assinaturaValida(req, corpo, m.secret, bruto)) {
-        console.warn('[instagram] assinatura inválida — evento descartado', JSON.stringify({ corpoCru: !!bruto, bytes: bruto ? bruto.length : null, temAssinatura: !!(req.headers && req.headers['x-hub-signature-256']), chaves: [!!m.secret, !!process.env.META_APP_SECRET] }));
+        console.warn('[instagram] assinatura inválida — evento descartado', JSON.stringify({ corpoCru: !!bruto, bytes: bruto ? bruto.length : null, temAssinatura: !!(req.headers && req.headers['x-hub-signature-256']), chaves: [!!m.secret, !!process.env.META_APP_SECRET], resumo: resumoEvento(corpo) }));
         return res.status(401).json({ error: 'assinatura inválida' });
       }
+      console.log('[instagram] evento recebido:', JSON.stringify(resumoEvento(corpo)));
       const resumo = await processarEventos(corpo, deps);
       return res.status(200).json({ ok: true, resumo });
     }
