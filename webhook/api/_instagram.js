@@ -104,7 +104,20 @@ function preencher(tpl, vars) { return String(tpl || '').replace(/\{(\w+)\}/g, (
 function jsonNoFormatoMeta(obj) {
   return JSON.stringify(obj).replace(/\//g, '\\/').replace(/[\u007f-￿]/g, (c) => '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4));
 }
-function assinaturaValida(req, corpo, secret) {
+// corpo cru da requisição (a assinatura da Meta é sobre os bytes exatos) — só funciona se
+// ninguém tiver lido req.body antes; sem stream (testes), devolve null
+function lerCorpoBruto(req) {
+  return new Promise((resolve) => {
+    if (!req || typeof req.on !== 'function' || req.readableEnded) return resolve(null);
+    const partes = []; let fim = false;
+    const acabar = (v) => { if (!fim) { fim = true; clearTimeout(t); resolve(v); } };
+    const t = setTimeout(() => acabar(partes.length ? Buffer.concat(partes).toString('utf8') : null), 2000);
+    req.on('data', (c) => partes.push(Buffer.from(c)));
+    req.on('end', () => acabar(partes.length ? Buffer.concat(partes).toString('utf8') : null));
+    req.on('error', () => acabar(null));
+  });
+}
+function assinaturaValida(req, corpo, secret, bruto) {
   if (process.env.IG_SKIP_SIGNATURE === '1') return true;
   const header = String((req.headers && (req.headers['x-hub-signature-256'] || req.headers['X-Hub-Signature-256'])) || '');
   // a Meta pode assinar com a chave do app do Instagram ou com a do app principal
@@ -112,7 +125,7 @@ function assinaturaValida(req, corpo, secret) {
   const segredos = [secret, process.env.META_APP_SECRET].filter(Boolean);
   if (!header.startsWith('sha256=') || !segredos.length) return false;
   const esperado = header.slice(7);
-  const candidatos = typeof req.body === 'string' ? [req.body] : [jsonNoFormatoMeta(corpo), JSON.stringify(corpo)];
+  const candidatos = bruto ? [bruto] : (typeof req.body === 'string' ? [req.body] : [jsonNoFormatoMeta(corpo), JSON.stringify(corpo)]);
   return segredos.some((sec) => candidatos.some((raw) => {
     const calc = crypto.createHmac('sha256', sec).update(raw, 'utf8').digest('hex');
     return calc.length === esperado.length && crypto.timingSafeEqual(Buffer.from(calc), Buffer.from(esperado));
@@ -357,8 +370,12 @@ async function handle(req, res, deps) {
         if (q['hub.mode'] === 'subscribe' && m.verify && q['hub.verify_token'] === m.verify) return res.status(200).send ? res.status(200).send(String(q['hub.challenge'])) : res.status(200).end(String(q['hub.challenge']));
         return res.status(403).json({ error: 'token de verificação inválido' });
       }
-      const corpo = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
-      if (!assinaturaValida(req, corpo, m.secret)) { console.warn('[instagram] assinatura inválida — evento descartado'); return res.status(401).json({ error: 'assinatura inválida' }); }
+      const bruto = await lerCorpoBruto(req);
+      const corpo = bruto ? JSON.parse(bruto || '{}') : (typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {}));
+      if (!assinaturaValida(req, corpo, m.secret, bruto)) {
+        console.warn('[instagram] assinatura inválida — evento descartado', JSON.stringify({ corpoCru: !!bruto, bytes: bruto ? bruto.length : null, temAssinatura: !!(req.headers && req.headers['x-hub-signature-256']), chaves: [!!m.secret, !!process.env.META_APP_SECRET] }));
+        return res.status(401).json({ error: 'assinatura inválida' });
+      }
       const resumo = await processarEventos(corpo, deps);
       return res.status(200).json({ ok: true, resumo });
     }
