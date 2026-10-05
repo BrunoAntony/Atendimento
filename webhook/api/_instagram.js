@@ -107,13 +107,16 @@ function jsonNoFormatoMeta(obj) {
 function assinaturaValida(req, corpo, secret) {
   if (process.env.IG_SKIP_SIGNATURE === '1') return true;
   const header = String((req.headers && (req.headers['x-hub-signature-256'] || req.headers['X-Hub-Signature-256'])) || '');
-  if (!header.startsWith('sha256=') || !secret) return false;
+  // a Meta pode assinar com a chave do app do Instagram ou com a do app principal
+  // (Configurações › Básico) — aceita qualquer uma das duas
+  const segredos = [secret, process.env.META_APP_SECRET].filter(Boolean);
+  if (!header.startsWith('sha256=') || !segredos.length) return false;
   const esperado = header.slice(7);
   const candidatos = typeof req.body === 'string' ? [req.body] : [jsonNoFormatoMeta(corpo), JSON.stringify(corpo)];
-  return candidatos.some((raw) => {
-    const calc = crypto.createHmac('sha256', secret).update(raw, 'utf8').digest('hex');
+  return segredos.some((sec) => candidatos.some((raw) => {
+    const calc = crypto.createHmac('sha256', sec).update(raw, 'utf8').digest('hex');
     return calc.length === esperado.length && crypto.timingSafeEqual(Buffer.from(calc), Buffer.from(esperado));
-  });
+  }));
 }
 function lerSignedRequest(sr, secret) {
   const [sig, payload] = String(sr || '').split('.');
