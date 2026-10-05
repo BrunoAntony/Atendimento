@@ -67,7 +67,11 @@ const SUPA_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || SUPA_ANON_KEY;
 const { readConfig, writeConfig } = require('./_configStore');
 const { resolveContext, resolveSegmento } = require('./_empresa');
 
-module.exports = async (req, res) => {
+module.exports = async function webhookHandler(req, res) {
+  // Instagram (eventos da Meta, login da conta, envio pelo app) — mesma função, rota própria
+  if (req.query && req.query.ig) return require('./_instagram').handle(req, res, { processar: webhookHandler });
+  // transporte do Direct do Instagram (montado pelo _instagram.js) — null = WhatsApp/uazapi
+  const ig = req._ig || null;
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, token, admintoken');
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
@@ -107,7 +111,7 @@ module.exports = async (req, res) => {
     if (!canalKey && req.url) {
       try { canalKey = new URL(req.url, 'http://x').searchParams.get('canal') || ''; } catch (e) {}
     }
-    const ctx = await resolveContext(canalKey, SUPA_SERVICE_KEY);
+    const ctx = ig ? ig.ctx : await resolveContext(canalKey, SUPA_SERVICE_KEY);
     const empresaId = ctx.empresaId;
     const uazBase = String(ctx.uazBaseUrl || '').replace(/\/+$/, '');
     const uazToken = ctx.uazToken || '';
@@ -125,11 +129,12 @@ module.exports = async (req, res) => {
     // métricas + pesquisa de satisfação — antes de qualquer outro filtro, pra contar também
     // conversas com humano e capturar a nota mesmo com o agente desligado. O número de
     // treinamento fica de fora (é teste, não atendimento real).
-    const telefoneCliente = phoneFromJid(from);
+    const telefoneCliente = telDe(from);
     const ehTreino = !!(cfg.treinoAtivo && (cfg.treinoNumero || '').replace(/\D/g, '') && telefoneCliente.replace(/\D/g, '') === (cfg.treinoNumero || '').replace(/\D/g, ''));
     if (!ehTreino) {
       await registrarEvento(empresaId, telefoneCliente, 'cliente_msg');
-      const pesquisa = await capturarNotaPesquisa(empresaId, telefoneCliente, text, uazBase, uazToken, from);
+      const pesquisa = await capturarNotaPesquisa(empresaId, telefoneCliente, text, ig ? '' : uazBase, uazToken, from);
+      if (pesquisa && ig) await ig.enviarTexto(pesquisa.agradecimento || 'Obrigado pela avaliação! 🙏').catch(() => {});
       if (pesquisa) {
         console.log('[pesquisa] nota registrada:', pesquisa.nota);
         return res.status(200).json({ ok: true, pesquisa: true, nota: pesquisa.nota });
@@ -149,7 +154,7 @@ module.exports = async (req, res) => {
     // avisos de handoff (é só teste) e cada mensagem do treinador é analisada em busca de
     // uma lição pra guardar e reaplicar em TODOS os atendimentos daí em diante
     const treinoNumeroDigits = (cfg.treinoNumero || '').replace(/\D/g, '');
-    const isTreinamento = !!(cfg.treinoAtivo && treinoNumeroDigits && phoneFromJid(from).replace(/\D/g, '') === treinoNumeroDigits);
+    const isTreinamento = !!(cfg.treinoAtivo && treinoNumeroDigits && telDe(from).replace(/\D/g, '') === treinoNumeroDigits);
     if (isTreinamento) console.log('[treinamento] mensagem do número de treinamento — modo aprendizado ativo');
 
     // palavra-chave para pausar o bot (atendimento humano)
@@ -161,7 +166,7 @@ module.exports = async (req, res) => {
     // conversa já transferida para um humano (pedido do cliente, IA sem resposta, ou
     // agendamento fechado) — não responde mais automaticamente até alguém devolver à IA no app
     // (não vale para o número de treinamento — ele sempre continua conversando com a IA)
-    if (!isTreinamento && await conversaEstaComHumano(phoneFromJid(from), empresaId)) {
+    if (!isTreinamento && await conversaEstaComHumano(telDe(from), empresaId)) {
       console.log('[webhook] ignorado: conversa com atendente humano');
       return res.status(200).json({ ignored: true, reason: 'conversa com atendente humano' });
     }
@@ -176,12 +181,12 @@ module.exports = async (req, res) => {
     const msgId = msg.id || msg.messageid || msg.messageId || (msg.key && msg.key.id) || '';
     // confirmação de leitura (check azul) desativada em toda a plataforma — o cliente não
     // vê "visto" enquanto o agente ainda está processando/decidindo a resposta
-    if (MARK_AS_READ) uazapiMarkRead(uazBase, uazToken, from, msgId).catch(() => {});
+    if (MARK_AS_READ && !ig) uazapiMarkRead(uazBase, uazToken, from, msgId).catch(() => {});
 
     // fila: marca esta mensagem como a mais recente da conversa e espera um pouco — se
     // o cliente mandar outra mensagem nesse meio tempo, ela vai atualizar a marca e ESTA
     // execução desiste de responder (quem responde é a execução mais nova)
-    const telefoneFila = phoneFromJid(from);
+    const telefoneFila = telDe(from);
     await marcarFila(telefoneFila, empresaId, msgId);
     // tempo de fila configurável por agente (aba Ferramentas) — cai no padrão/env var se
     // o agente ainda não tiver esse campo salvo (configs antigas)
@@ -203,14 +208,14 @@ module.exports = async (req, res) => {
     const detectarRobo = cfg.detectarRobo !== false && !isTreinamento;
     const nomeContato = msg.senderName || msg.pushName || msg.notifyName || msg.chatName || msg.name || '';
     if (detectarRobo) {
-      const sinal = await analisarRobo(uazBase, uazToken, from, text);
+      const sinal = ig ? sinaisDeRobo(await ig.mensagensBrutas().catch(() => []), Date.now(), text) : await analisarRobo(uazBase, uazToken, from, text);
       if (sinal.robo) {
         await pausarPorRobo(empresaId, telefoneFila, nomeContato, sinal.motivo, uazBase, uazToken, cfg.notifyNumber || NOTIFY_NUMBER_ENV);
         return res.status(200).json({ ignored: true, reason: 'outro robô detectado: ' + sinal.motivo });
       }
     }
 
-    const history = await fetchHistory(uazBase, uazToken, from, msgId);
+    const history = ig ? await ig.historico(msgId).catch(() => '') : await fetchHistory(uazBase, uazToken, from, msgId);
     const historyNote = history ? ('\n\nHistórico recente da conversa (mais antigas primeiro):\n' + history) : '';
 
     // catálogo de produtos (categorias > subcategorias com fotos de modelos)
@@ -310,7 +315,7 @@ module.exports = async (req, res) => {
     if (isAudio || isImage || isDoc) {
       if (!mediaUrl && !msgId) { console.log('[webhook] ignorado: mídia sem URL nem id'); return res.status(200).json({ ignored: true, reason: 'mídia sem URL nem id' }); }
       console.log('[webhook] baixando mídia:', { isAudio, isImage, isDoc, msgId, temMediaUrl: !!mediaUrl });
-      const bin = await downloadMedia(uazBase, uazToken, mediaUrl, msgId);
+      const bin = ig ? await downloadMedia('', '', mediaUrl, '') : await downloadMedia(uazBase, uazToken, mediaUrl, msgId);
       console.log('[webhook] mídia baixada:', { bytes: bin.buffer && bin.buffer.byteLength, contentType: bin.contentType });
       const b64 = Buffer.from(bin.buffer).toString('base64');
       // bin.contentType vem do arquivo de verdade que baixamos (via /message/download) — mais
@@ -376,7 +381,7 @@ module.exports = async (req, res) => {
       } catch (e) { console.error('[treinamento] falha ao analisar mensagem:', e.message || e); }
     }
 
-    const telefone = phoneFromJid(from);
+    const telefone = telDe(from);
     const nomeCliente = msg.senderName || msg.pushName || msg.notifyName || msg.chatName || msg.name || telefone;
 
     // classificação no funil de vendas — best-effort, nunca derruba a resposta ao cliente
@@ -411,7 +416,7 @@ module.exports = async (req, res) => {
           || text || 'Sem detalhes adicionais.';
         const resumoMsg = '🔔 *Atendimento precisa de atenção humana*\n'
           + 'Cliente: ' + nomeCliente + '\n'
-          + 'Telefone: ' + telefone + '\n'
+          + (ig ? 'Canal: Instagram (Direct)\n' : ('Telefone: ' + telefone + '\n'))
           + 'Motivo: ' + motivo
           + (agendamentoData ? ('\nData do agendamento: ' + agendamentoData) : '')
           + '\n\nResumo: ' + resumo;
@@ -423,27 +428,30 @@ module.exports = async (req, res) => {
 
     let replied = false;
     let imagesSent = 0;
-    if (!AUTO_REPLY || !reply || !uazBase || !uazToken) console.log('[webhook] não vai enviar resposta:', { AUTO_REPLY, temReply: !!reply, temUazBase: !!uazBase, temUazToken: !!uazToken });
-    if (AUTO_REPLY && reply && uazBase && uazToken) {
+    const podeEnviar = !!(ig || (uazBase && uazToken));
+    if (!AUTO_REPLY || !reply || !podeEnviar) console.log('[webhook] não vai enviar resposta:', { AUTO_REPLY, temReply: !!reply, temUazBase: !!uazBase, temUazToken: !!uazToken, instagram: !!ig });
+    if (AUTO_REPLY && reply && podeEnviar) {
       // espera um pouco antes de responder, pra não parecer instantâneo/robótico —
       // mostra "digitando…" durante essa espera, pra parecer alguém realmente escrevendo
       const delaySec = Math.min(10, Math.max(2, Number(cfg.respostaDelay) || 3));
-      uazapiSetPresence(uazBase, uazToken, from, 'composing').catch(() => {});
+      if (!ig) uazapiSetPresence(uazBase, uazToken, from, 'composing').catch(() => {});
       await new Promise((r) => setTimeout(r, delaySec * 1000));
       // reconfere de novo — se um humano assumiu a conversa durante essa última espera
       // (digitando…), não manda a resposta que já tinha sido gerada
-      if (isTreinamento || !(await conversaEstaComHumano(telefoneFila, empresaId))) {
+      // (a própria IA acabou de transferir? então a conversa está "com humano" por causa
+      // DESTA resposta — ela ainda precisa sair, senão o cliente fica sem o aviso da transferência)
+      if (isTreinamento || precisaHumano || agendamentoFechado || !(await conversaEstaComHumano(telefoneFila, empresaId))) {
       // envia cada parte como mensagem separada (estilo WhatsApp real), com uma pausa
       // curta + "digitando…" entre elas quando há mais de uma parte
       for (let pi = 0; pi < replyList.length; pi++) {
         if (pi > 0) {
-          uazapiSetPresence(uazBase, uazToken, from, 'composing').catch(() => {});
+          if (!ig) uazapiSetPresence(uazBase, uazToken, from, 'composing').catch(() => {});
           await new Promise((r) => setTimeout(r, 1200 + Math.random() * 900));
         }
         // marca a mensagem como sendo de treinamento (só no número de treino) — assim dá
         // pra identificar na conversa do WhatsApp quais respostas são teste, não venda real
         const texto = (isTreinamento && pi === 0) ? ('*treinamento*\n' + replyList[pi]) : replyList[pi];
-        await uazapiSendText(uazBase, uazToken, from, texto);
+        if (ig) await ig.enviarTexto(texto); else await uazapiSendText(uazBase, uazToken, from, texto);
       }
       replied = true;
       if (!isTreinamento) await registrarEvento(empresaId, telefoneFila, 'resposta_ia');
@@ -476,7 +484,7 @@ module.exports = async (req, res) => {
         }
         for (const item of imgs) {
           const caption = (isGeral && item.tags.length) ? item.tags.join(', ') : '';
-          await uazapiSendImage(uazBase, uazToken, from, item.url, caption);
+          if (ig) await ig.enviarImagem(item.url, caption); else await uazapiSendImage(uazBase, uazToken, from, item.url, caption);
           imagesSent++;
           await new Promise((r) => setTimeout(r, 500)); // evita rajada/flood na uazapi
         }
@@ -486,7 +494,7 @@ module.exports = async (req, res) => {
       if (cfg.gerarImagemAtivo && parsed && parsed.gerarImagem && parsed.promptImagem) {
         try {
           const dataUrl = await geminiGenerateImage(parsed.promptImagem, geminiKey);
-          await uazapiSendImage(uazBase, uazToken, from, dataUrl);
+          if (ig) await ig.enviarImagem(dataUrl); else await uazapiSendImage(uazBase, uazToken, from, dataUrl);
           imagesSent++;
         } catch (e) { console.error('[imagem IA] falha ao gerar/enviar:', e.message || e); }
       }
@@ -676,6 +684,11 @@ function findSubcategoria(catalogo, subId) {
     if (sub) return sub;
   }
   return null;
+}
+
+// chave da conversa: "ig:<igsid>" para o Direct do Instagram, telefone (+55...) no WhatsApp
+function telDe(from) {
+  return /^ig:/.test(String(from || '')) ? String(from) : phoneFromJid(from);
 }
 
 function phoneFromJid(jid) {

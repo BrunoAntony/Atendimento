@@ -99,6 +99,9 @@ async function rodarLembretes(agora, ctx) {
     const dataIsoMs = new Date(ag.data_iso).getTime();
     if (isNaN(dataIsoMs)) continue;
     if (dataIsoMs < agora - GRACE_MIN * 60000) continue; // já passou demais — não avisa mais
+    // agendamento vindo do Direct do Instagram: não há WhatsApp pra avisar (e a Meta só
+    // deixa mandar DM até 24h depois da última mensagem do cliente)
+    if (/^ig:/.test(String(ag.telefone || ''))) { pulados++; continue; }
 
     const cfg = (await ctx.agente(ag.empresa_id)) || {};
     const alertaMin = Number(cfg.alertaAgendamentoMin) || 0;
@@ -398,6 +401,8 @@ module.exports = async (req, res) => {
   // derruba as outras — os lembretes de agendamento continuam saindo
   try { out.lembretes = await rodarLembretes(agora, ctx); } catch (e) { out.lembretes = { erro: String((e && e.message) || e) }; }
   try { out.automacoes = await rodarAutomacoes(agora, ctx); } catch (e) { out.automacoes = { erro: String((e && e.message) || e) }; }
+  // tokens do Instagram vencem em 60 dias — renova os que estão perto de vencer
+  try { out.instagram = await require('./_instagram').renovarTokens(); } catch (e) { out.instagram = { erro: String((e && e.message) || e) }; }
   return res.status(200).json(out);
 };
 // exposto só para os testes

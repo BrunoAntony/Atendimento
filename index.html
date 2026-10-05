@@ -1676,7 +1676,7 @@
 <x-dc>
 <helmet>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
-<script>window.__VERSATIL_BUILD__ = "1791201300301";</script>
+<script>window.__VERSATIL_BUILD__ = "1791208822104";</script>
 <style>
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;height:100%;}
@@ -3517,6 +3517,45 @@ input:focus,select:focus,textarea:focus{outline:2px solid #14b8a6;outline-offset
             </sc-if>
           </div>
 
+          <!-- instagram: comentários com palavra-chave -->
+          <div style="background:var(--color-background-primary);border:1px solid var(--color-border-tertiary);border-radius:var(--radius);overflow:hidden;">
+            <div style="display:flex;align-items:flex-start;gap:14px;padding:18px 20px;">
+              <div style="width:40px;height:40px;border-radius:11px;background:rgba(225,48,108,.14);color:#E1306C;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ti ti-brand-instagram" style="font-size:21px;"></i></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:700;font-size:15px;">Instagram: comentários com palavra-chave</div>
+                <div style="font-size:12.5px;color:var(--color-text-secondary);margin-top:3px;line-height:1.5;">Quando alguém comenta num post ou reels com uma das palavras, a pessoa recebe uma mensagem no Direct (e, se quiser, uma resposta pública no comentário). Quando ela responde no Direct, a IA continua o atendimento.</div>
+              </div>
+              <button onClick="{{ autoSwInstagram.onClick }}" style="{{ autoSwInstagram.trackStyle }}" title="Ligar / desligar"><span style="{{ autoSwInstagram.knobStyle }}"></span></button>
+            </div>
+            <sc-if value="{{ autoSwInstagram.on }}" hint-placeholder-val="{{ false }}">
+              <div class="auto-corpo" style="display:flex;flex-direction:column;gap:12px;padding:4px 20px 20px 74px;">
+                <sc-if value="{{ autoIgSemConta }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;align-items:center;gap:9px;background:var(--color-background-warning);color:var(--color-text-warning);border-radius:10px;padding:10px 14px;font-size:12.5px;line-height:1.5;"><i class="ti ti-alert-triangle" style="font-size:16px;flex-shrink:0;"></i><div>Nenhuma conta do Instagram conectada — conecte em Agentes IA › Canais para as regras funcionarem.</div></div>
+                </sc-if>
+                <sc-for list="{{ autoIgRegras }}" as="r" hint-placeholder-count="1">
+                  <div style="border:1px solid var(--color-border-tertiary);border-radius:11px;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--color-background-secondary);">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                      <span style="font-weight:700;font-size:13px;flex:1;">{{ r.titulo }}</span>
+                      <button onClick="{{ r.onRemover }}" title="Remover regra" style="background:none;border:none;color:var(--color-text-secondary);cursor:pointer;padding:4px;"><i class="ti ti-trash" style="font-size:16px;"></i></button>
+                    </div>
+                    <label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;font-weight:600;color:var(--color-text-secondary);">Palavras-chave (separadas por vírgula)
+                      <input value="{{ r.palavras }}" onInput="{{ r.onPalavras }}" placeholder="ex: preço, quero, eu quero, link" style="padding:9px 12px;border:1px solid var(--color-border-tertiary);border-radius:9px;background:var(--color-background-primary);font-weight:400;">
+                      <span style="font-weight:400;font-size:12px;">Deixe vazio para responder a qualquer comentário. Acentos e maiúsculas não importam.</span>
+                    </label>
+                    <label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;font-weight:600;color:var(--color-text-secondary);">Mensagem no Direct
+                      <textarea value="{{ r.mensagem }}" onInput="{{ r.onMensagem }}" rows="3" placeholder="Oi {nome}! Te mandei os detalhes aqui 😉" style="padding:9px 12px;border:1px solid var(--color-border-tertiary);border-radius:9px;background:var(--color-background-primary);resize:vertical;font-family:inherit;font-weight:400;"></textarea>
+                      <span style="font-weight:400;font-size:12px;">Variável: {nome} (vira o @ da pessoa). O Instagram permite uma mensagem por comentário, em até 7 dias.</span>
+                    </label>
+                    <label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;font-weight:600;color:var(--color-text-secondary);">Resposta pública no comentário (opcional)
+                      <input value="{{ r.respostaPublica }}" onInput="{{ r.onRespostaPublica }}" placeholder="Te chamei no Direct! 📩" style="padding:9px 12px;border:1px solid var(--color-border-tertiary);border-radius:9px;background:var(--color-background-primary);font-weight:400;">
+                    </label>
+                  </div>
+                </sc-for>
+                <div><button onClick="{{ onIgNovaRegra }}" style="display:inline-flex;align-items:center;gap:6px;background:var(--color-background-primary);border:1px dashed var(--color-border-secondary);border-radius:9px;padding:9px 14px;font-weight:600;font-size:13px;cursor:pointer;color:var(--color-text-primary);"><i class="ti ti-plus" style="font-size:15px;"></i>Adicionar regra</button></div>
+              </div>
+            </sc-if>
+          </div>
+
           <!-- salvar -->
           <div style="position:sticky;bottom:0;display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:12px 0;background:linear-gradient(transparent, var(--color-background-secondary) 35%);">
             <sc-if value="{{ autoAlterado }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;color:var(--color-text-warning);font-weight:600;display:inline-flex;align-items:center;gap:5px;"><i class="ti ti-point-filled" style="font-size:14px;"></i>Alterações não salvas</span></sc-if>
@@ -3721,6 +3760,24 @@ input:focus,select:focus,textarea:focus{outline:2px solid #14b8a6;outline-offset
                 </div>
               </div>
             </sc-for>
+          </div>
+
+          <!-- INSTAGRAM -->
+          <div style="background:var(--color-background-primary);border:1px solid var(--color-border-tertiary);border-radius:var(--radius);padding:18px 20px;margin:-14px 0 30px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+            <div style="width:42px;height:42px;border-radius:11px;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;"><i class="ti ti-brand-instagram"></i></div>
+            <div style="flex:1;min-width:220px;">
+              <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+                <span style="font-weight:700;font-size:14.5px;">Instagram</span>
+                <span style="{{ igStatusStyle }}"><span style="{{ igDotStyle }}"></span>{{ igStatusLabel }}</span>
+              </div>
+              <div style="font-size:12.5px;color:var(--color-text-secondary);margin-top:4px;line-height:1.5;">{{ igDetalhe }}</div>
+            </div>
+            <sc-if value="{{ igConectado }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ onIgDesconectar }}" style="{{ igDesconectarStyle }}">{{ igDesconectarLabel }}</button>
+            </sc-if>
+            <sc-if value="{{ igMostraConectar }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ onIgConectar }}" style="{{ igConectarStyle }}"><i class="ti ti-brand-instagram" style="font-size:16px;"></i>{{ igConectarLabel }}</button>
+            </sc-if>
           </div>
 
           <!-- AGENTES header -->
@@ -5740,7 +5797,8 @@ class Component extends DCLogic {
     }
     this.loadAll(); this.seedAtendimento(); this.loadCatalogo(); this.loadFunil(); this.loadAgendamentos(); this.loadEmpresas(); this.loadUsuarios(); this.loadChatInterno(); this.loadDevUsers(); this.loadAtendimentoExtras();
     setTimeout(() => this.checkRetornosIA(), 800);
-    this._pollMsgs = setInterval(() => this.pollNovasMensagens(), 12000);
+    this._pollMsgs = setInterval(() => { this.pollNovasMensagens(); this.pollInstagram(); }, 12000);
+    this.loadInstagramStatus(); this.tratarRetornoInstagram();
     this._updCheck = setInterval(() => this.checkForUpdate(), 60000);
     this._chatInternoPoll = setInterval(() => { if (this.state.tab === 'chatinterno') this.loadChatInterno(); }, 5000);
     setTimeout(() => this.checkForUpdate(), 5000);
@@ -6267,7 +6325,9 @@ class Component extends DCLogic {
   };
   async loadConversasFromSupabase() {
     const rows = await this.api('GET', 'conversas', { query: 'select=dados' });
-    return (rows || []).map(r => r.dados).filter(Boolean);
+    const lista = (rows || []).map(r => r.dados).filter(Boolean);
+    this._igServ = {}; lista.filter(c => c.source === 'ig').forEach(c => { this._igServ[c.id] = this.igCtrl(c); });
+    return lista;
   }
   // tenta salvar no Supabase até 3x (com espera crescente); se mesmo assim falhar, avisa
   // visivelmente — antes disso, uma falha de rede pontual ficava só no console, dando falsa
@@ -6284,7 +6344,9 @@ class Component extends DCLogic {
     return false;
   }
   async syncConversas() {
-    const list = this.state.conversas || [];
+    const todas = this.state.conversas || [];
+    this.syncControlesIg(todas.filter(c => c.source === 'ig'));
+    const list = todas.filter(c => c.source !== 'ig');
     const rows = list.map(c => {
       const telefone = this.convPhone(c);
       if (!telefone) return null;
@@ -6901,7 +6963,11 @@ class Component extends DCLogic {
   // JIDs de multi-dispositivo vêm como "5545999999999:26@s.whatsapp.net" — o ":26" é o
   // aparelho, não o telefone; sem cortar isso antes de tirar os não-numéricos, esses
   // dígitos grudavam no final do número (telefone "estranho", maior que o de verdade).
-  convPhone(conv) { return String((conv && (conv.telefone || conv.chatid)) || '').split('@')[0].split(':')[0].replace(/[^0-9+]/g, ''); }
+  convPhone(conv) {
+    const t = String((conv && (conv.telefone || conv.chatid)) || '');
+    if (/^ig:/.test(t)) return t; // Direct do Instagram: a chave é o id do contato, não telefone
+    return t.split('@')[0].split(':')[0].replace(/[^0-9+]/g, '');
+  }
   openRenomearConv(id) { const c = (this.state.conversas || []).find(x => x.id === id); this.setState({ convMenuOpen: false, modal: 'renomear_conv', form: { _convId: id, nome: (c && c.nome) || '' } }); }
   saveRenomearConv() {
     const f = this.state.form; const nome = (f.nome || '').trim();
@@ -6989,6 +7055,7 @@ class Component extends DCLogic {
     this.setState(s => ({ activeConv: id, notaDraft: s.activeConv === id ? s.notaDraft : '', etiquetaDraft: s.activeConv === id ? s.etiquetaDraft : '', rrAberto: false, conversas: s.conversas.map(c => c.id === id ? Object.assign({}, c, { unread: 0, lastReadTs: c.ts || 0 }) : c) }), () => { this.persistCA(); this.scrollThreadBottom(true); });
     const c = (this.state.conversas || []).find(x => x.id === id);
     if (c && c.source === 'wpp' && c.chatid) this.loadWppMessages(c);
+    if (c && c.source === 'ig' && c.igsid) this.loadIgMessages(c);
   }
   scrollThreadBottom(force) {
     // rola a thread para a última mensagem
@@ -6997,6 +7064,123 @@ class Component extends DCLogic {
     setTimeout(doScroll, 60);
     if (force) setTimeout(doScroll, 220);
   }
+  // ---- Instagram (Direct + comentários) — tudo passa pelo servidor (/api/webhook?ig=...) ----
+  IG_URL = 'https://webhook-blond-pi.vercel.app/api/webhook';
+  // campos da conversa que são do app (o resto — prévia, horário — quem escreve é o servidor)
+  IG_CTRL = ['nome', 'humano', 'iaAtiva', 'resolvida', 'resolvidaAt', '_localCtrl', 'assumidoPor', 'setor', 'lastReadTs', 'unread'];
+  igCtrl(c) { return JSON.stringify(this.IG_CTRL.map(k => (c && c[k] != null) ? c[k] : null)); }
+  async igApi(modo, method, body, extraQs) {
+    await this.ensureAuthFresh();
+    const token = this.state.authSession && this.state.authSession.access_token;
+    const r = await fetch(this.IG_URL + '?ig=' + modo + (extraQs || ''), { method: method || 'GET', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: body ? JSON.stringify(body) : undefined });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+    return d;
+  }
+  async loadInstagramStatus() {
+    const gen = this._bootGen;
+    try { const d = await this.igApi('status'); if (gen === this._bootGen) this.setState({ igStatus: d }); }
+    catch (e) { if (gen === this._bootGen) this.setState({ igStatus: { erro: (e && e.message) || String(e) } }); }
+  }
+  async conectarInstagram() {
+    this.setState({ igConectando: true });
+    try {
+      const volta = window.location.origin + window.location.pathname;
+      const d = await this.igApi('conectar', 'GET', null, '&voltar=' + encodeURIComponent(volta));
+      window.location.href = d.url;
+    } catch (e) { this.setState({ igConectando: false }); this.toast('error', (e && e.message) || String(e)); }
+  }
+  async desconectarInstagram() {
+    // dois cliques: o primeiro pede confirmação
+    if (!this.state.igConfirmDesc) { this.setState({ igConfirmDesc: true }); clearTimeout(this._igDescT); this._igDescT = setTimeout(() => this.setState({ igConfirmDesc: false }), 5000); return; }
+    this.setState({ igConfirmDesc: false });
+    try { await this.igApi('desconectar', 'POST', {}); this.toast('info', 'Instagram desconectado — a IA parou de responder o Direct'); }
+    catch (e) { this.toast('error', (e && e.message) || String(e)); }
+    this.loadInstagramStatus();
+  }
+  // volta do login do Instagram: ?ig=conectado:<usuario> ou ?ig_erro=<mensagem>
+  tratarRetornoInstagram() {
+    let q; try { q = new URLSearchParams(window.location.search); } catch (e) { return; }
+    const ok = q.get('ig'), erro = q.get('ig_erro');
+    if (!ok && !erro) return;
+    if (ok && /^conectado/.test(ok)) { const u = ok.split(':')[1]; this.toast('success', 'Instagram ' + (u ? '@' + u + ' ' : '') + 'conectado — as mensagens do Direct já chegam no Atendimento'); }
+    if (erro) this.toast('error', 'Não foi possível conectar o Instagram: ' + erro);
+    q.delete('ig'); q.delete('ig_erro');
+    try { window.history.replaceState(null, '', window.location.pathname + (q.toString() ? '?' + q.toString() : '') + window.location.hash); } catch (e) {}
+    this.setState({ tab: 'agentes' });
+  }
+  // conversas do Direct: o servidor cria/atualiza; aqui só mescla (a cada 12s, na aba Atendimento)
+  async pollInstagram() {
+    if (this.state.tab !== 'atendimento' || this._igBusy) return;
+    const st = this.state.igStatus;
+    if (!(st && st.conta) && !(this.state.conversas || []).some(c => c.source === 'ig')) return;
+    this._igBusy = true; const gen = this._bootGen;
+    try {
+      const rows = await this.api('GET', 'conversas', { query: 'select=dados&canal=eq.Instagram' });
+      if (gen !== this._bootGen) return;
+      this.mesclarConversasIg((rows || []).map(r => r.dados).filter(Boolean));
+      const conv = (this.state.conversas || []).find(c => c.id === this.state.activeConv);
+      if (conv && conv.source === 'ig' && conv.igsid) await this.loadIgMessages(conv);
+    } catch (e) { /* silencioso: tenta de novo no próximo ciclo */ }
+    finally { this._igBusy = false; }
+  }
+  mesclarConversasIg(lista) {
+    this._igServ = this._igServ || {}; this._igCtrlAt = this._igCtrlAt || {};
+    this.setState(s => {
+      const atuais = s.conversas || [], porId = {};
+      atuais.forEach(c => { porId[c.id] = c; });
+      const novas = [];
+      lista.forEach(sv => {
+        if (!sv.id || sv.source !== 'ig') return;
+        this._igServ[sv.id] = this.igCtrl(sv);
+        const base = { ts: Number(sv.ts || 0), timeLabel: this.wppTs(sv.ts), previewText: sv.previewText || '', avatar: sv.avatar || '' };
+        const loc = porId[sv.id];
+        if (!loc) { novas.push(Object.assign({}, sv, base, { msgs: [] })); return; }
+        const m = Object.assign({}, loc, base);
+        // controle mexido aqui há pouco (ainda salvando): vale o local; senão vale o do servidor
+        // (é lá que a IA marca "precisa de humano" e soma as não lidas)
+        if (!(this._igCtrlAt[sv.id] && Date.now() - this._igCtrlAt[sv.id] < 20000)) this.IG_CTRL.forEach(k => { if (k in sv) m[k] = sv[k]; });
+        if (s.activeConv === sv.id) m.unread = 0;
+        porId[sv.id] = m;
+      });
+      return { conversas: [...novas, ...atuais.map(c => porId[c.id])] };
+    });
+  }
+  // leitura-mescla-gravação só das conversas cujos controles mudaram aqui no app
+  async syncControlesIg(convs) {
+    this._igServ = this._igServ || {}; this._igCtrlAt = this._igCtrlAt || {};
+    for (const c of convs) {
+      const snap = this.igCtrl(c);
+      if (!c.telefone || this._igServ[c.id] === snap) continue;
+      this._igServ[c.id] = snap; this._igCtrlAt[c.id] = Date.now();
+      try {
+        const rows = await this.api('GET', 'conversas', { query: 'select=dados&telefone=eq.' + encodeURIComponent(c.telefone) });
+        const atual = (rows && rows[0] && rows[0].dados) || Object.assign({}, c, { msgs: [] });
+        const novo = Object.assign({}, atual);
+        this.IG_CTRL.forEach(k => { if (c[k] !== undefined) novo[k] = c[k]; });
+        const r = await fetch(this.SUPA_URL + '/rest/v1/conversas?on_conflict=empresa_id,telefone', { method: 'POST', headers: this.headers({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
+          body: JSON.stringify({ telefone: c.telefone, nome: novo.nome || '', canal: 'Instagram', dados: novo, updated_at: new Date().toISOString() }) });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+      } catch (e) { this._igServ[c.id] = null; console.warn('[instagram] controle da conversa não salvo:', (e && e.message) || e); }
+    }
+  }
+  async loadIgMessages(conv) {
+    try {
+      const rows = (await this.api('GET', 'ig_mensagens', { query: 'select=*&igsid=eq.' + encodeURIComponent(conv.igsid) + '&order=em.desc&limit=80' })) || [];
+      const msgs = rows.reverse().map(m => {
+        const t = m.texto || '', marcador = /^\[[a-z_]+\]/i.test(t);
+        const tipo = m.midia_url ? (/audio/i.test(t) ? 'audio' : (/video|reel/i.test(t) ? 'document' : 'image')) : 'text';
+        return { id: 'ig_' + (m.mid || m.id), from: m.from_me ? 'empresa' : 'cliente', type: tipo, text: (marcador && m.midia_url) ? '' : t, url: m.midia_url || '', fileName: tipo === 'document' ? 'vídeo' : '', time: this.wppTs(Date.parse(m.em)) };
+      });
+      this.setState(s => ({ conversas: s.conversas.map(c => {
+        if (c.id !== conv.id) return c;
+        // mantém as mensagens que ainda estão saindo (envio otimista) ou falharam
+        const pendentes = (c.msgs || []).filter(x => (x.sending || x.failed) && !/^ig_/.test(String(x.id)));
+        return Object.assign({}, c, { msgs: msgs.concat(pendentes), _msgsLoaded: true });
+      }) }), () => { if (this.state.activeConv === conv.id) this.scrollThreadBottom(); });
+    } catch (e) { /* sem o script 34: a conversa fica sem histórico */ }
+  }
+
   // ---- sincronização de conversas reais do WhatsApp (uazapi) ----
   wppConnectedChannel() { return (this.state.canais || []).find(c => c.tipo === 'WhatsApp' && c.status === 'conectado' && c.uazapi && c.uazapi.instanceToken); }
   // chat da uazapi sem nenhuma mensagem (ou com número inválido): não entra na lista
@@ -7483,16 +7667,18 @@ class Component extends DCLogic {
   // quando o cliente responder (até 24h). Não repete pro mesmo cliente dentro do intervalo.
   async enviarPesquisaSatisfacao(conv) {
     const p = (this.state.autoRegrasAtend || {}).pesquisa;
-    if (!p || !p.ativo || !(conv && conv.source === 'wpp' && conv.chatid)) return;
+    const ehIg = !!(conv && conv.source === 'ig' && conv.igsid);
+    if (!p || !p.ativo || !((conv && conv.source === 'wpp' && conv.chatid) || ehIg)) return;
     const tel = this.telDigitos(conv), ch = this.wppConnectedChannel();
-    if (!tel || !ch) return;
+    if (!tel || (!ch && !ehIg)) return;
     try {
       const desde = new Date(Date.now() - (Number(p.intervaloDias) || 7) * 86400000).toISOString();
       const recentes = await this.api('GET', 'pesquisas_satisfacao', { query: 'telefone=eq.' + tel + '&enviada_em=gt.' + encodeURIComponent(desde) + '&select=id&limit=1' });
       if (recentes && recentes.length) return;
       const nome = (conv.nome || '').trim().split(/\s+/)[0] || '';
       const texto = String(p.pergunta || '').replace(/\{nome\}/gi, nome).replace(/\s+,/g, ',').trim();
-      await this.uaFetch(this.uaBaseFor(ch.uazapi), '/send/text', 'POST', ch.uazapi.instanceToken, { number: conv.chatid, text: texto });
+      if (ehIg) await this.igApi('enviar', 'POST', { igsid: conv.igsid, texto });
+      else await this.uaFetch(this.uaBaseFor(ch.uazapi), '/send/text', 'POST', ch.uazapi.instanceToken, { number: conv.chatid, text: texto });
       await this.api('POST', 'pesquisas_satisfacao', { body: { id: this.genId(), telefone: tel, nome: conv.nome || null, atendente: conv.humano ? (conv.assumidoPor || this.currentUsername() || null) : 'IA', status: 'pendente', agradecimento: p.agradecimento || null } });
       this.toast('info', 'Pesquisa de satisfação enviada para ' + (conv.nome || 'o cliente'));
     } catch (e) { console.warn('[pesquisa] não enviada:', (e && e.message) || e); }
@@ -7591,12 +7777,13 @@ class Component extends DCLogic {
         textoAntes: 'Olá {nome}, tudo bem? Passando para lembrar que {descricao} no valor de {valor} vence em {vencimento}.{pix}',
         textoDia: 'Olá {nome}, tudo bem? Hoje é o vencimento de {descricao}, no valor de {valor}. Se já pagou, é só desconsiderar.{pix}',
         textoDepois: 'Olá {nome}, tudo bem? Consta em aberto {descricao}, no valor de {valor}, que venceu em {vencimento}. Se já pagou, me envie o comprovante, por favor. Qualquer dúvida estou à disposição!{pix}' },
+      instagram: { ativo: false, regras: [] },
       pesquisa: { ativo: false, intervaloDias: 7, pergunta: 'Oi {nome}! Como você avalia o nosso atendimento? Responda com uma nota de 1 a 5 (5 = excelente) ⭐', agradecimento: 'Obrigado pela avaliação! Ela nos ajuda a melhorar sempre. 🙏' },
     };
   }
   mesclarRegras(salvas) {
     const p = this.regrasAutomacaoPadrao(), s = salvas || {};
-    return { horario: Object.assign(p.horario, s.horario), retomada: Object.assign(p.retomada, s.retomada), cobranca: Object.assign(p.cobranca, s.cobranca), pesquisa: Object.assign(p.pesquisa, s.pesquisa) };
+    return { horario: Object.assign(p.horario, s.horario), retomada: Object.assign(p.retomada, s.retomada), cobranca: Object.assign(p.cobranca, s.cobranca), pesquisa: Object.assign(p.pesquisa, s.pesquisa), instagram: Object.assign(p.instagram, s.instagram) };
   }
   async loadAutomacoes() {
     let regras = null, envios = [], semTabela = false;
@@ -7614,9 +7801,15 @@ class Component extends DCLogic {
     this.setAutoCampo(sec, campo, v);
   };
   setAutoCampo(sec, campo, v) { this.setState(s => ({ autoForm: Object.assign({}, s.autoForm, { [sec]: Object.assign({}, (s.autoForm || {})[sec], { [campo]: v }) }) })); }
+  // regras de comentário do Instagram (lista dentro de autoForm.instagram.regras)
+  setIgRegras(fn) { this.setState(s => { const ig = Object.assign({ ativo: false, regras: [] }, (s.autoForm || {}).instagram); return { autoForm: Object.assign({}, s.autoForm, { instagram: Object.assign({}, ig, { regras: fn(ig.regras || []) }) }) }; }); }
+  novaRegraIg() { this.setIgRegras(rs => rs.concat([{ id: 'r' + Date.now(), palavras: '', mensagem: 'Oi {nome}! Vi seu comentário e te mandei os detalhes por aqui 😉', respostaPublica: 'Te chamei no Direct! 📩', ativo: true }])); }
   async salvarAutomacoes() {
     const data = this.state.autoForm;
     if (!data) return;
+    const igRegras = (data.instagram && data.instagram.regras) || [];
+    if (data.instagram && data.instagram.ativo && !igRegras.length) return this.toast('error', 'Adicione pelo menos uma regra de comentário do Instagram');
+    if (igRegras.some(r => !(r.mensagem || '').trim() && !(r.respostaPublica || '').trim())) return this.toast('error', 'Toda regra do Instagram precisa de uma mensagem no Direct ou de uma resposta pública');
     if (data.horario.fim <= data.horario.inicio) return this.toast('error', 'O horário final precisa ser depois do inicial');
     if (data.retomada.ativo && data.retomada.modo === 'texto' && !(data.retomada.texto || '').trim()) return this.toast('error', 'Escreva a mensagem de retomada');
     this.setState({ autoSalvando: true });
@@ -7627,7 +7820,7 @@ class Component extends DCLogic {
         if (!r.ok) throw new Error((await r.text()) || ('HTTP ' + r.status));
       });
       this.setState({ autoSalvando: false, autoSalvo: JSON.stringify(data), autoRegrasAtend: data });
-      const ligadas = [data.retomada.ativo && 'retomada', data.cobranca.ativo && 'cobrança', data.pesquisa && data.pesquisa.ativo && 'pesquisa de satisfação'].filter(Boolean);
+      const ligadas = [data.retomada.ativo && 'retomada', data.cobranca.ativo && 'cobrança', data.pesquisa && data.pesquisa.ativo && 'pesquisa de satisfação', data.instagram && data.instagram.ativo && 'comentários do Instagram'].filter(Boolean);
       this.toast('success', ligadas.length ? 'Automações salvas — ' + ligadas.join(' e ') + ' ligada' + (ligadas.length > 1 ? 's' : '') : 'Automações salvas (todas desligadas)');
     } catch (e) { this.setState({ autoSalvando: false }); this.toast('error', this.friendlyErr(e)); }
   }
@@ -7792,6 +7985,7 @@ class Component extends DCLogic {
   // telefone comparável entre cadastros: DDD + 8 últimos dígitos (o WhatsApp às vezes
   // entrega o celular sem o 9 da frente, e o cadastro costuma ter com)
   telKey(t) {
+    if (/^ig:/.test(String(t || ''))) return String(t);
     const d = this.foneWhats(String(t || '').split('@')[0].split(':')[0].replace(/\D/g, ''));
     return d.length >= 12 && d.indexOf('55') === 0 ? d.slice(2, 4) + d.slice(-8) : d;
   }
@@ -7828,6 +8022,7 @@ class Component extends DCLogic {
     if ((!txt && !media) || !S.activeConv) return;
     const convId = S.activeConv;
     const conv = (S.conversas || []).find(c => c.id === convId);
+    if (media && conv && conv.source === 'ig') return this.toast('info', 'Pelo Instagram, por enquanto, o app envia só texto.');
     const now = this.hhmm();
     const msgId = 'm' + Date.now();
     const replyTo = S.chatReplyTo || null;
@@ -7856,6 +8051,15 @@ class Component extends DCLogic {
       } catch (e) {
         this.markMsg(convId, msgId, { sending: false, failed: true });
         this.toast('error', 'Falha ao enviar: ' + this.uaFriendly(e));
+      }
+    } else if (conv && conv.source === 'ig' && conv.igsid) {
+      try {
+        await this.igApi('enviar', 'POST', { igsid: conv.igsid, texto: txt });
+        this.markMsg(convId, msgId, { sending: false, sent: true });
+        this.registrarEventoAtend(conv, 'resposta_humano', quem);
+      } catch (e) {
+        this.markMsg(convId, msgId, { sending: false, failed: true });
+        this.toast('error', 'Falha ao enviar no Instagram: ' + ((e && e.message) || e));
       }
     } else {
       // conversa local/demo — apenas confirma
@@ -8728,7 +8932,11 @@ class Component extends DCLogic {
     const msgId = 'ia' + Date.now();
     // adiciona a resposta do agente (marcada como enviando se for WhatsApp)
     const isWpp = conv.source === 'wpp' && conv.chatid;
-    this.setState(s => ({ conversas: s.conversas.map(c => c.id === conv.id ? Object.assign({}, c, { iaAtiva: true, msgs: [...c.msgs, { id: msgId, from: 'ia', text: reply, time: now, agente: agent.nome, sending: isWpp }] }) : c), aiThinking: false }), () => { this.persistCA(); if (this.state.activeConv === conv.id) this.scrollThreadBottom(true); });
+    this.setState(s => ({ conversas: s.conversas.map(c => c.id === conv.id ? Object.assign({}, c, { iaAtiva: true, msgs: [...c.msgs, { id: msgId, from: 'ia', text: reply, time: now, agente: agent.nome, sending: isWpp || conv.source === 'ig' }] }) : c), aiThinking: false }), () => { this.persistCA(); if (this.state.activeConv === conv.id) this.scrollThreadBottom(true); });
+    if (conv.source === 'ig' && conv.igsid) {
+      try { await this.igApi('enviar', 'POST', { igsid: conv.igsid, texto: reply }); this.markMsg(conv.id, msgId, { sending: false, sent: true }); }
+      catch (e) { this.markMsg(conv.id, msgId, { sending: false, failed: true }); this.toast('error', 'Falha ao enviar no Instagram: ' + ((e && e.message) || e)); }
+    }
     // envia de verdade pelo WhatsApp (uazapi)
     if (isWpp) {
       const ch = this.wppConnectedChannel();
@@ -10735,6 +10943,15 @@ class Component extends DCLogic {
       vm.autoSwRetomada = sw(f.retomada.ativo, () => this.setAutoCampo('retomada', 'ativo', !f.retomada.ativo));
       vm.autoSwCobranca = sw(f.cobranca.ativo, () => this.setAutoCampo('cobranca', 'ativo', !f.cobranca.ativo));
       vm.autoSwPesquisa = sw(f.pesquisa.ativo, () => this.setAutoCampo('pesquisa', 'ativo', !f.pesquisa.ativo));
+      const igF = f.instagram || { ativo: false, regras: [] };
+      vm.autoSwInstagram = sw(!!igF.ativo, () => { this.setAutoCampo('instagram', 'ativo', !igF.ativo); if (!igF.ativo && !(igF.regras || []).length) this.novaRegraIg(); });
+      vm.autoIgSemConta = !!(S.igStatus && !S.igStatus.conta && !S.igStatus.erro);
+      const igCampo = (id, campo) => (e) => { const v = e.target.value; this.setIgRegras(rs => rs.map(r => r.id === id ? Object.assign({}, r, { [campo]: v }) : r)); };
+      vm.autoIgRegras = (igF.regras || []).map((r, i) => ({ titulo: 'Regra ' + (i + 1) + (r.palavras && r.palavras.trim() ? ' — ' + r.palavras.trim() : ' — qualquer comentário'),
+        palavras: r.palavras || '', mensagem: r.mensagem || '', respostaPublica: r.respostaPublica || '',
+        onPalavras: igCampo(r.id, 'palavras'), onMensagem: igCampo(r.id, 'mensagem'), onRespostaPublica: igCampo(r.id, 'respostaPublica'),
+        onRemover: () => this.setIgRegras(rs => rs.filter(x => x.id !== r.id)) }));
+      vm.onIgNovaRegra = () => this.novaRegraIg();
       vm.autoPesq = { pergunta: f.pesquisa.pergunta, agradecimento: f.pesquisa.agradecimento, intervaloDias: String(f.pesquisa.intervaloDias) };
       vm.autoPesqOpcoes = [[1, '1 dia'], [3, '3 dias'], [7, '7 dias'], [15, '15 dias'], [30, '30 dias']].map(([v, label]) => ({ value: String(v), label }));
       vm.autoSwSabado = sw(f.horario.sabado, () => this.setAutoCampo('horario', 'sabado', !f.horario.sabado));
@@ -10797,11 +11014,11 @@ class Component extends DCLogic {
       vm.autoCobSemEtapas = !vm.autoCobPrevias.length;
 
       // últimos envios
-      const tipoInfo = { retomada: ['Retomada', 'info'], cobranca_antes: ['Lembrete', 'neutral'], cobranca_dia: ['Vence hoje', 'warning'], cobranca_depois: ['Cobrança', 'danger'] };
+      const tipoInfo = { retomada: ['Retomada', 'info'], cobranca_antes: ['Lembrete', 'neutral'], cobranca_dia: ['Vence hoje', 'warning'], cobranca_depois: ['Cobrança', 'danger'], ig_comentario: ['Instagram', 'info'] };
       vm.autoEnvios = (S.autoEnvios || []).map(e => {
         const t = tipoInfo[e.tipo] || [e.tipo, 'neutral'];
         return { quando: new Date(e.enviado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }), tipo: t[0], tipoStyle: this.badge(t[1]),
-          quem: (e.nome || '').trim() || this.fmtPhoneBR(e.telefone), telefone: this.fmtPhoneBR(e.telefone), mensagem: e.mensagem || '' };
+          quem: (e.nome || '').trim() || this.fmtPhoneBR(e.telefone), telefone: /^ig:/.test(String(e.telefone || '')) ? 'Instagram' : this.fmtPhoneBR(e.telefone), mensagem: e.mensagem || '' };
       });
       vm.autoEnviosVazio = !vm.autoEnvios.length;
       vm.autoEnviosVazioMsg = S.autoSemTabela ? 'Execute o script supabase/29_automacao_envios.sql no Supabase para registrar os envios.' : 'Nenhuma mensagem automática enviada ainda.';
@@ -11176,8 +11393,8 @@ class Component extends DCLogic {
           onClick: () => this.openConv(c.id),
           onRenomear: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.openRenomearConv(c.id); },
           initials: this.initials(c.nome), nome: c.nome,
-          canalIcon: c.canal === 'WhatsApp' ? 'ti-brand-whatsapp' : (c.canal === 'E-mail' ? 'ti-mail' : 'ti-message-dots'),
-          canalBadgeStyle: { position: 'absolute', right: '-2px', bottom: '-2px', width: '18px', height: '18px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#fff', background: c.canal === 'WhatsApp' ? '#25D366' : (c.canal === 'E-mail' ? '#6b7280' : '#3b82f6'), border: '2px solid var(--color-background-primary)' },
+          canalIcon: c.canal === 'WhatsApp' ? 'ti-brand-whatsapp' : c.canal === 'Instagram' ? 'ti-brand-instagram' : (c.canal === 'E-mail' ? 'ti-mail' : 'ti-message-dots'),
+          canalBadgeStyle: { position: 'absolute', right: '-2px', bottom: '-2px', width: '18px', height: '18px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#fff', background: c.canal === 'WhatsApp' ? '#25D366' : c.canal === 'Instagram' ? '#E1306C' : (c.canal === 'E-mail' ? '#6b7280' : '#3b82f6'), border: '2px solid var(--color-background-primary)' },
           // selo compacto ao lado do nome: quem está atendendo agora (agente de IA pelo nome, ou um humano)
           handlerShow: handlerIsIa || handlerIsHumano,
           handlerIcon: handlerIsIa ? 'ti-robot' : 'ti-headset',
@@ -11620,6 +11837,26 @@ class Component extends DCLogic {
           onRemove: () => this.removeCanal(c.id),
         };
       });
+      // Instagram (card abaixo dos canais)
+      const ig = S.igStatus || null, igConta = ig && ig.conta;
+      vm.igConectado = !!igConta;
+      vm.igMostraConectar = !igConta;
+      vm.igStatusLabel = !ig ? 'Verificando…' : igConta ? ('@' + (igConta.username || 'conectado')) : (ig.erro ? 'Indisponível' : (ig.configurado ? 'Desconectado' : 'Aguardando configuração'));
+      vm.igStatusStyle = { display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11.5px', fontWeight: 700, padding: '3px 9px', borderRadius: '999px', background: igConta ? 'var(--color-background-success)' : 'var(--color-background-tertiary)', color: igConta ? 'var(--color-text-success)' : 'var(--color-text-secondary)' };
+      vm.igDotStyle = { width: '6px', height: '6px', borderRadius: '50%', background: igConta ? '#22c55e' : '#94a3b8' };
+      const igVence = igConta && igConta.tokenExpiraEm ? new Date(igConta.tokenExpiraEm).toLocaleDateString('pt-BR') : '';
+      vm.igDetalhe = !ig ? 'Verificando a conexão com o Instagram…'
+        : ig.erro ? ('Não foi possível verificar a conexão: ' + ig.erro)
+        : igConta ? ('A IA responde o Direct com o mesmo agente do WhatsApp e as conversas aparecem no Atendimento. Respostas a comentários com palavra-chave ficam em Automações.' + (igVence ? ' Conexão renovada automaticamente (válida até ' + igVence + ').' : ''))
+        : ig.configurado ? 'Conecte a conta profissional do Instagram da empresa: a IA passa a responder o Direct e você pode responder comentários com palavras-chave.'
+        : 'O app da Meta ainda não foi configurado no servidor (IG_APP_ID, IG_APP_SECRET e IG_VERIFY_TOKEN). Depois disso, o botão Conectar passa a funcionar.';
+      const igPode = !!(ig && ig.configurado && !S.igConectando);
+      vm.igConectarLabel = S.igConectando ? 'Abrindo o Instagram…' : 'Conectar Instagram';
+      vm.igConectarStyle = { display: 'inline-flex', alignItems: 'center', gap: '7px', border: 'none', borderRadius: '9px', padding: '9px 15px', fontSize: '13px', fontWeight: 700, cursor: igPode ? 'pointer' : 'not-allowed', opacity: igPode ? 1 : 0.55, color: '#fff', background: 'linear-gradient(45deg,#f09433,#dc2743,#bc1888)' };
+      vm.onIgConectar = () => { if (igPode) this.conectarInstagram(); else if (ig && !ig.configurado) this.toast('info', 'Falta configurar o app da Meta no servidor (IG_APP_ID, IG_APP_SECRET e IG_VERIFY_TOKEN na Vercel).'); };
+      vm.igDesconectarLabel = S.igConfirmDesc ? 'Clique de novo para desconectar' : 'Desconectar';
+      vm.igDesconectarStyle = { border: '1px solid ' + (S.igConfirmDesc ? '#ef4444' : 'var(--color-border-tertiary)'), background: S.igConfirmDesc ? '#ef4444' : 'transparent', color: S.igConfirmDesc ? '#fff' : 'var(--color-text-secondary)', borderRadius: '9px', padding: '9px 14px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' };
+      vm.onIgDesconectar = () => this.desconectarInstagram();
       vm.agentesList = ags.map(a => {
         const linkedNames = (a.canais || []).map(id => { const ch = this.chById(id); return ch ? ch.nome : null; }).filter(Boolean);
         return {

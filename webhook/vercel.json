@@ -1,5 +1,11 @@
 {
   "version": 2,
+  "rewrites": [
+    { "source": "/instagram/webhook", "destination": "/api/webhook?ig=webhook" },
+    { "source": "/instagram/callback", "destination": "/api/webhook?ig=callback" },
+    { "source": "/instagram/exclusao", "destination": "/api/webhook?ig=exclusao" },
+    { "source": "/instagram/desautorizar", "destination": "/api/webhook?ig=desautorizar" }
+  ],
   "functions": {
     "api/webhook.js": {
       "maxDuration": 120
