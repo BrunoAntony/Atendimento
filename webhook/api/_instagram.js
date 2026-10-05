@@ -379,6 +379,19 @@ async function handle(req, res, deps) {
         return res.status(200).end('<!doctype html><meta charset="utf-8"><title>Exclusão de dados</title><body style="font-family:system-ui;padding:40px;max-width:560px">'
           + '<h2>Solicitação de exclusão de dados</h2><p>Código: <b>' + String(q.codigo).replace(/[^a-z0-9-]/gi, '') + '</b></p><p>Os dados da conta do Instagram vinculados ao Versatil (token de acesso e mensagens do Direct) foram excluídos.</p></body>');
       }
+      // aberto no navegador (é o que a Meta confere no campo "URL de instruções de exclusão de dados")
+      if (req.method === 'GET') {
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.status(200).end('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Exclusão de dados — Versatil</title></head>'
+          + '<body style="font-family:system-ui,sans-serif;padding:32px 20px;max-width:640px;margin:auto;line-height:1.6;color:#1f2937">'
+          + '<h1 style="font-size:22px">Como excluir seus dados do Versatil (Instagram)</h1>'
+          + '<p>O Versatil guarda, da conta do Instagram conectada pela empresa, o token de acesso, o nome de usuário e as mensagens do Direct trocadas com os clientes dessa empresa.</p>'
+          + '<p>Para excluir esses dados, use uma das opções:</p><ol>'
+          + '<li>No Instagram, abra <b>Configurações › Apps e sites</b>, encontre o app <b>Atendimento DeOli</b> e clique em <b>Remover</b>. A remoção apaga automaticamente o token e as mensagens guardadas.</li>'
+          + '<li>No Versatil, a empresa pode clicar em <b>Agentes IA › Canais › Instagram › Desconectar</b>.</li>'
+          + (process.env.CONTATO_PRIVACIDADE ? ('<li>Ou peça a exclusão por e-mail para <b>' + String(process.env.CONTATO_PRIVACIDADE).replace(/[<>&"]/g, '') + '</b>, informando o @ da conta. Respondemos em até 30 dias.</li>') : '')
+          + '</ol></body></html>');
+      }
       const corpo = typeof req.body === 'string' ? Object.fromEntries(new URLSearchParams(req.body)) : (req.body || {});
       const dados = lerSignedRequest(corpo.signed_request, m.secret);
       if (!dados || !dados.user_id) return res.status(400).json({ error: 'signed_request inválido' });
