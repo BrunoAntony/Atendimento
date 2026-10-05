@@ -4,7 +4,8 @@
     { "source": "/instagram/webhook", "destination": "/api/webhook?ig=webhook" },
     { "source": "/instagram/callback", "destination": "/api/webhook?ig=callback" },
     { "source": "/instagram/exclusao", "destination": "/api/webhook?ig=exclusao" },
-    { "source": "/instagram/desautorizar", "destination": "/api/webhook?ig=desautorizar" }
+    { "source": "/instagram/desautorizar", "destination": "/api/webhook?ig=desautorizar" },
+    { "source": "/privacidade", "destination": "/api/webhook?ig=privacidade" }
   ],
   "functions": {
     "api/webhook.js": {

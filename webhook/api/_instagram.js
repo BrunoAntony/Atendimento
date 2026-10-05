@@ -373,6 +373,12 @@ async function handle(req, res, deps) {
       catch (e) { console.error('[instagram] falha ao conectar:', e.message); return redirecionar('ig_erro', e.message); }
     }
     // ----- exigências da Meta: exclusão de dados e desautorização -----
+    // política de privacidade (pública — exigida pela Meta)
+    if (modo === 'privacidade') {
+      const contato = process.env.CONTATO_PRIVACIDADE ? String(process.env.CONTATO_PRIVACIDADE).replace(/[<>&"]/g, '') : '';
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.status(200).end(paginaPrivacidade(contato));
+    }
     if (modo === 'exclusao' || modo === 'desautorizar') {
       if (req.method === 'GET' && q.codigo) {
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -461,6 +467,34 @@ async function renovarTokens() {
     } catch (e) { console.error('[instagram] não renovou token da conta', c.id, e.message); }
   }
   return { verificadas: contas.length, renovados };
+}
+
+
+// ---------- política de privacidade ----------
+function paginaPrivacidade(contato) {
+  const h2 = (t) => '<h2 style="font-size:17px;margin-top:28px">' + t + '</h2>';
+  return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Política de Privacidade — Versatil</title></head>'
+    + '<body style="font-family:system-ui,sans-serif;padding:32px 20px;max-width:720px;margin:auto;line-height:1.65;color:#1f2937">'
+    + '<h1 style="font-size:24px">Política de Privacidade — Versatil (DeOli Automações)</h1>'
+    + '<p style="color:#6b7280">Última atualização: 05/10/2026</p>'
+    + '<p>O Versatil é um sistema de gestão e atendimento usado por empresas para conversar com seus clientes pelo WhatsApp e pelo Instagram, com apoio de inteligência artificial. Esta política explica quais dados tratamos, para quê e como você pode pedir a exclusão, conforme a Lei Geral de Proteção de Dados (LGPD).</p>'
+    + h2('1. Quais dados tratamos')
+    + '<ul><li><b>Da empresa que conecta a conta do Instagram:</b> identificador e nome de usuário da conta profissional e o token de acesso fornecido pela Meta.</li>'
+    + '<li><b>De quem conversa com a empresa:</b> nome ou @ do Instagram, identificador da conversa, mensagens enviadas e recebidas no Direct (texto e links de mídia) e comentários que acionam respostas automáticas configuradas pela empresa.</li>'
+    + '<li><b>Do WhatsApp:</b> número de telefone, nome e mensagens trocadas com a empresa.</li></ul>'
+    + h2('2. Para que usamos')
+    + '<ul><li>Exibir as conversas no painel de atendimento da empresa;</li><li>Gerar respostas automáticas com inteligência artificial em nome da empresa;</li><li>Enviar respostas a comentários com palavras-chave definidas pela empresa;</li><li>Registrar agendamentos, etapas de venda e métricas de atendimento da própria empresa.</li></ul>'
+    + '<p>Não vendemos dados, não usamos os dados para publicidade e não os compartilhamos com terceiros além do necessário para o funcionamento do serviço.</p>'
+    + h2('3. Com quem compartilhamos')
+    + '<ul><li><b>Meta (Instagram/WhatsApp):</b> para receber e enviar as mensagens;</li><li><b>Google (Gemini):</b> o texto da conversa é enviado ao modelo de IA para gerar a resposta;</li><li><b>Supabase e Vercel:</b> provedores de banco de dados e hospedagem onde os dados ficam armazenados.</li></ul>'
+    + h2('4. Por quanto tempo guardamos')
+    + '<p>Os dados ficam guardados enquanto a empresa usar o Versatil ou até que a exclusão seja pedida. Ao desconectar a conta do Instagram, o token de acesso é apagado imediatamente.</p>'
+    + h2('5. Seus direitos e exclusão de dados')
+    + '<p>Você pode pedir acesso, correção ou exclusão dos seus dados. Para os dados do Instagram, basta remover o app em <b>Configurações › Apps e sites</b> no Instagram — o token e as mensagens guardadas são apagados automaticamente. Veja também a <a href="/instagram/exclusao">página de exclusão de dados</a>.</p>'
+    + (contato ? '<p>Contato do responsável pelos dados: <b>' + contato + '</b>.</p>' : '<p>Para outros pedidos, fale com a empresa que atendeu você.</p>')
+    + h2('6. Segurança')
+    + '<p>Os dados trafegam por conexões criptografadas (HTTPS), o acesso é restrito por empresa e os tokens de acesso nunca são enviados ao navegador.</p>'
+    + '</body></html>';
 }
 
 module.exports = { handle, renovarTokens, _t: { palavrasCasam, preencher, jsonNoFormatoMeta, assinaturaValida, lerSignedRequest, processarEventos, tratarComentario, tratarMensagem, tipoDoAnexo, voltaSegura, erroAmigavel } };
