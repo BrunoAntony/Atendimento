@@ -8,7 +8,7 @@
 //    /instagram/callback  → volta do login do Instagram (troca o código pelo token)
 //    /instagram/exclusao  → pedido de exclusão de dados (exigência da Meta)
 //    /instagram/desautorizar → usuário removeu o app no Instagram
-//  e, para o app (com o token de login do Versatil):
+//  e, para o app (com o token de login do Atendimento):
 //    ?ig=status | ?ig=conectar | ?ig=desconectar | ?ig=enviar
 //
 //  Variáveis na Vercel: IG_APP_ID, IG_APP_SECRET, IG_VERIFY_TOKEN
@@ -341,7 +341,7 @@ async function conectarConta(empresaId, code) {
   }
   const igUserId = String(me.user_id || me.id);
   const existente = await contaPorIgId(igUserId);
-  if (existente && existente.empresa_id !== empresaId && existente.ativo) throw new Error('Esta conta do Instagram já está conectada a outra empresa no Versatil.');
+  if (existente && existente.empresa_id !== empresaId && existente.ativo) throw new Error('Esta conta do Instagram já está conectada a outra empresa no Atendimento.');
   // passa a receber mensagens e comentários dessa conta
   await graph('POST', '/me/subscribed_apps?subscribed_fields=messages,comments', t.token);
   // uma conta por empresa: troca a anterior, se houver
@@ -454,7 +454,7 @@ async function handle(req, res, deps) {
       const codigo = crypto.randomBytes(6).toString('hex');
       return res.status(200).json({ url: BASE_PUBLICA + '/instagram/exclusao?codigo=' + codigo, confirmation_code: codigo });
     }
-    // ----- rotas do app (exigem login no Versatil) -----
+    // ----- rotas do app (exigem login no Atendimento) -----
     const sessao = await sessaoDoApp(req);
     if (!sessao) return res.status(401).json({ error: 'Sessão inválida — entre no app de novo.' });
     if (modo === 'status') {

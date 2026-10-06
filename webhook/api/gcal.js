@@ -1,7 +1,7 @@
 // ============================================================
 //  Google Calendar sync  (função serverless — Vercel/Node)
 // ------------------------------------------------------------
-//  Recebe um agendamento do APP VERSATIL e cria o evento
+//  Recebe um agendamento do CRM ATENDIMENTO e cria o evento
 //  automaticamente na Google Agenda da empresa — SEM o usuário
 //  precisar clicar. Usa um refresh token OAuth (configurado 1x).
 //

@@ -49,7 +49,7 @@ const AUTO_REPLY = process.env.AUTO_REPLY !== 'false';
 // confirmação de leitura (check azul) desativada por padrão em toda a plataforma — só liga
 // se alguém setar MARK_AS_READ=true explicitamente na Vercel
 const MARK_AS_READ = process.env.MARK_AS_READ === 'true';
-const DEFAULT_PROMPT = 'Você é um assistente de atendimento da empresa Versatil (gestão para salões e comércio). Responda em português do Brasil, de forma curta, cordial e útil, como uma mensagem de WhatsApp.';
+const DEFAULT_PROMPT = 'Você é um assistente de atendimento da empresa. Responda em português do Brasil, de forma curta, cordial e útil, como uma mensagem de WhatsApp.';
 const FUNIL_ESTAGIOS = ['novo', 'qualificando', 'interessado', 'fechamento', 'aguardando_reuniao', 'ganho', 'perdido'];
 const NOTIFY_NUMBER_ENV = process.env.NOTIFY_NUMBER || '';
 // fila de mensagens: quando o cliente manda várias mensagens seguidas rapidinho, espera
