@@ -323,11 +323,22 @@ async function trocarCodigo(code) {
   const r2 = await fetch('https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=' + encodeURIComponent(secret) + '&access_token=' + encodeURIComponent(curto.access_token));
   const longo = await r2.json().catch(() => ({}));
   if (!r2.ok || !longo.access_token) throw new Error((longo.error && longo.error.message) || 'Falha ao gerar o token de longa duração');
-  return { token: longo.access_token, expiraEm: new Date(Date.now() + (Number(longo.expires_in) || 5184000) * 1000).toISOString(), appUserId: String(curto.user_id || '') };
+  return { token: longo.access_token, expiraEm: new Date(Date.now() + (Number(longo.expires_in) || 5184000) * 1000).toISOString(), appUserId: String(curto.user_id || ''), permissoes: curto.permissions || null };
 }
 async function conectarConta(empresaId, code) {
   const t = await trocarCodigo(code);
-  const me = await graph('GET', '/me?fields=user_id,username,name', t.token);
+  // dados da conta: tenta com menos campos se a Meta recusar; se nem assim, o motivo mais comum
+  // é conta pessoal (não profissional) ou permissão desmarcada na tela do login
+  let me = null, ultimoErro = null;
+  for (const campos of ['user_id,username,name', 'user_id,username', 'id,username']) {
+    try { me = await graph('GET', '/me?fields=' + campos, t.token); break; }
+    catch (e) { ultimoErro = e; console.warn('[instagram] /me?fields=' + campos + ' falhou:', e.message, JSON.stringify({ code: e.code, subcode: e.subcode, permissoes: t.permissoes })); }
+  }
+  if (!me) {
+    const err = new Error('O Instagram não liberou os dados da conta. Confira se ela é uma conta profissional (Comercial ou Criador de conteúdo) e se todas as permissões foram aceitas na tela de login — depois tente conectar de novo.');
+    err.causa = ultimoErro && ultimoErro.message;
+    throw err;
+  }
   const igUserId = String(me.user_id || me.id);
   const existente = await contaPorIgId(igUserId);
   if (existente && existente.empresa_id !== empresaId && existente.ativo) throw new Error('Esta conta do Instagram já está conectada a outra empresa no Versatil.');
