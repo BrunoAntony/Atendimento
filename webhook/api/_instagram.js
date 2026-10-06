@@ -344,11 +344,19 @@ async function conectarConta(empresaId, code) {
 }
 
 // ---------- autenticação das rotas usadas pelo app ----------
-function sessaoDoApp(req) {
+// o token do login normal não traz empresa_id (só o da troca de empresa do dev) — nesse
+// caso a empresa vem do cadastro do usuário, como nas outras rotas (users.js)
+async function sessaoDoApp(req) {
   const secret = process.env.SUPABASE_JWT_SECRET;
   const token = String((req.headers && req.headers.authorization) || '').replace(/^Bearer\s+/i, '').trim();
   const p = secret ? jwt.verify(token, secret) : null;
-  return p && p.sub && p.empresa_id ? p : null;
+  if (!p || !p.sub) return null;
+  if (p.empresa_id) return p;
+  try {
+    const rows = await sbGet('app_users?id=eq.' + encodeURIComponent(p.sub) + '&select=empresa_id&limit=1');
+    const empresaId = rows[0] && rows[0].empresa_id;
+    return empresaId ? Object.assign({}, p, { empresa_id: empresaId }) : null;
+  } catch (e) { return null; }
 }
 function voltaSegura(url) {
   const u = String(url || '');
@@ -436,7 +444,7 @@ async function handle(req, res, deps) {
       return res.status(200).json({ url: BASE_PUBLICA + '/instagram/exclusao?codigo=' + codigo, confirmation_code: codigo });
     }
     // ----- rotas do app (exigem login no Versatil) -----
-    const sessao = sessaoDoApp(req);
+    const sessao = await sessaoDoApp(req);
     if (!sessao) return res.status(401).json({ error: 'Sessão inválida — entre no app de novo.' });
     if (modo === 'status') {
       const conta = await contaDaEmpresa(sessao.empresa_id).catch(() => null);
